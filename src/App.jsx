@@ -5,7 +5,7 @@ import {
   FileText, Link as LinkIcon, Plus, X, Wallet, Globe, Languages,
   Loader2, Trash2, Image as ImageIcon, Check, UploadCloud, 
   CloudRain, Cloud, Wind, Umbrella, Shirt, CloudSun, RefreshCw, Wifi, AlertTriangle,
-  Bug, User
+  Bug, Database
 } from 'lucide-react';
 
 // --- Firebase Imports ---
@@ -63,7 +63,7 @@ class ErrorBoundary extends React.Component {
 }
 
 // ============================================================================
-// ✅ 金鑰設定 (已填入)
+// ✅ 金鑰設定
 // ============================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
@@ -74,8 +74,8 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-// ✅ v37 全新 ID，確保乾淨開始 (支援個人清單)
-const APP_ID = 'tokyo_trip_v37_multi_checklist'; 
+// ✅ v39 新增行程排序與清單更新
+const APP_ID = 'tokyo_trip_v39_add_event_sort'; 
 // ============================================================================
 
 // --- 資料與常數 ---
@@ -164,7 +164,29 @@ const INITIAL_ITINERARY = [
   }
 ];
 
-const INITIAL_CHECKLIST = [{ id: 1, text: "護照", checked: false }, { id: 2, text: "機票", checked: false }];
+// ✅ 根據圖片更新的清單項目
+const INITIAL_CHECKLIST = [
+    { id: 1, text: "護照", checked: false },
+    { id: 2, text: "機票 / 筆", checked: false },
+    { id: 3, text: "行動電源", checked: false },
+    { id: 4, text: "充電器", checked: false },
+    { id: 5, text: "鑰匙", checked: false },
+    { id: 6, text: "塑膠袋", checked: false },
+    { id: 7, text: "睡衣褲", checked: false },
+    { id: 8, text: "外套", checked: false },
+    { id: 9, text: "毛巾", checked: false },
+    { id: 10, text: "盥洗用具 (牙膏牙刷)", checked: false },
+    { id: 11, text: "藥品 (腸胃藥.頭痛藥...)", checked: false },
+    { id: 12, text: "護照影本 (與護照分開存放)", checked: false },
+    { id: 13, text: "護照用照片2張", checked: false },
+    { id: 14, text: "台幣外幣現金", checked: false },
+    { id: 15, text: "耳機 / 機上玩具", checked: false },
+    { id: 16, text: "大人小孩衣物", checked: false },
+    { id: 17, text: "內衣內褲 / 襪子", checked: false },
+    { id: 18, text: "沐浴用品", checked: false },
+    { id: 19, text: "JAPAN Visit Web / 保險", checked: false },
+    { id: 20, text: "眼鏡.隱形眼鏡", checked: false }
+];
 
 const CHECKLIST_MEMBERS = ["Tracy", "Jay", "Emma", "Remy", "IF", "爸爸", "媽媽"];
 
@@ -220,7 +242,6 @@ const WeatherStrip = ({ hourlyWeather, isLoading, isError }) => (
 
 const ChecklistView = ({ currentMember, setCurrentMember, checklist, newItemText, setNewItemText, handleAddChecklistItem, toggleChecklistItem, deleteChecklistItem }) => (
     <div className="px-4 pb-20 pt-4 animate-fade-in select-none">
-        {/* 成員選擇器 */}
         <div className="flex overflow-x-auto gap-2 mb-4 pb-2 no-scrollbar">
             {CHECKLIST_MEMBERS.map(member => (
                 <button
@@ -239,7 +260,9 @@ const ChecklistView = ({ currentMember, setCurrentMember, checklist, newItemText
 
         <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6 border border-white/10 shadow-lg">
             <div className="flex items-center gap-2 mb-4">
-                <User size={20} className="text-green-400"/>
+                <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
+                    <Check size={16} />
+                </div>
                 <h2 className="text-xl font-bold text-white">
                     {currentMember} 的清單
                 </h2>
@@ -358,7 +381,7 @@ const BudgetView = ({ expenses, exchangeRate, payers, newExpenseName, setNewExpe
     );
 };
 
-const ItineraryView = ({ currentDay, weatherLoading, liveWeather, weatherError, activeDate, setActiveDate, handleEventClick }) => {
+const ItineraryView = ({ currentDay, weatherLoading, liveWeather, weatherError, activeDate, setActiveDate, handleEventClick, handleAddItineraryEvent }) => {
     const events = Array.isArray(currentDay.events) ? currentDay.events : [];
     return (
       <div className="px-4 pb-28 pt-2">
@@ -400,12 +423,10 @@ const ItineraryView = ({ currentDay, weatherLoading, liveWeather, weatherError, 
           </div>
         </div>
         
-        {/* 🚀 UI 還原：分開時間軸樣式 */}
         <div className="space-y-6 relative pl-2">
           <div className="absolute left-[3.8rem] top-6 bottom-6 w-0.5 bg-gradient-to-b from-indigo-500/20 via-purple-500/50 to-indigo-500/20 rounded-full"></div>
           {events.map((event, idx) => (
             <div key={idx} className="relative z-10 cursor-pointer select-none" onClick={() => handleEventClick(event, activeDate)}>
-              {/* 航班特殊樣式 (維持大卡片) */}
               {event.category === 'flight' ? (
                   <div className="w-full bg-blue-600 bg-opacity-90 rounded-3xl p-5 shadow-xl text-white mb-8 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 border border-white/10">
                      <div className="flex justify-between items-center mb-6 relative z-10">
@@ -428,7 +449,6 @@ const ItineraryView = ({ currentDay, weatherLoading, liveWeather, weatherError, 
                      {event.notes && <div className="mt-3 text-xs text-white/70 bg-black/10 p-2 rounded">{event.notes}</div>}
                   </div>
               ) : (
-                  /* 一般行程樣式 (還原為左右分離設計) */
                   <div className="flex items-start group mb-6">
                     <div className="flex flex-col items-center mr-4 pt-1 w-14 flex-shrink-0">
                         <span className="text-lg font-bold font-mono tracking-tight opacity-90">{event.time}</span>
@@ -479,6 +499,15 @@ const ItineraryView = ({ currentDay, weatherLoading, liveWeather, weatherError, 
               )}
             </div>
           ))}
+          {/* ✅ 新增行程按鈕 */}
+          <div className="flex justify-center mt-6 mb-8">
+            <button 
+                onClick={() => handleAddItineraryEvent(activeDate)}
+                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-full font-bold transition-all border border-white/20 shadow-lg active:scale-95"
+            >
+                <Plus size={20} /> 新增行程
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -493,16 +522,51 @@ const EditModal = ({ isModalOpen, editingEvent, setEditingEvent, handleDeleteEve
         <div className="bg-[#fcfaf5] w-full max-w-sm rounded-xl shadow-2xl pointer-events-auto transform transition-transform overflow-hidden animate-in fade-in zoom-in duration-200 border-2 border-[#d4af37] p-5 space-y-5">
             <div className="flex justify-between items-center border-b border-gray-200 pb-4">
                 <h3 className="text-lg font-bold text-gray-800 font-serif">行程編輯</h3>
+                {/* 只有非新增的行程才能刪除 (如果有 id 就代表已存在，若是新創的 id 也可以刪除，這裡邏輯皆可) */}
                 <button onClick={handleDeleteEvent} className="text-red-500 text-sm font-medium px-2 py-1 rounded hover:bg-red-50"><Trash2 size={14}/> 刪除</button>
             </div>
-            <input type="text" value={editingEvent.time} onChange={e => setEditingEvent({...editingEvent, time: e.target.value})} className="w-full bg-transparent border-b border-gray-300 py-2 text-xl font-serif text-gray-800 focus:outline-none"/>
-            <input type="text" value={editingEvent.title} onChange={e => setEditingEvent({...editingEvent, title: e.target.value})} className="w-full bg-transparent border-b border-gray-300 py-2 text-lg font-bold text-gray-800 focus:outline-none"/>
-            <input type="text" value={editingEvent.sub || editingEvent.dest || ''} onChange={e => { const key = editingEvent.category === 'flight' ? 'dest' : 'sub'; setEditingEvent({...editingEvent, [key]: e.target.value}); }} className="w-full bg-transparent border-b border-gray-300 py-2 text-base text-gray-800 focus:outline-none" placeholder="副標題 / 說明"/>
-            <textarea rows={3} value={editingEvent.notes || ''} onChange={e => setEditingEvent({...editingEvent, notes: e.target.value})} className="w-full bg-transparent border-b border-gray-300 py-2 text-base text-gray-600 focus:outline-none resize-none" placeholder="備註事項..."/>
+            
+            <div className="flex gap-4">
+               <div className="flex-1">
+                <label className="text-xs text-[#8c8c8c] font-medium mb-1 block">時間</label>
+                <input type="text" value={editingEvent.time} onChange={e => setEditingEvent({...editingEvent, time: e.target.value})} className="w-full bg-transparent border-b border-gray-300 py-2 text-xl font-serif text-gray-800 focus:outline-none"/>
+               </div>
+               <div className="flex-1">
+                <label className="text-xs text-[#8c8c8c] font-medium mb-1 block">分類</label>
+                <div className="relative">
+                    <select value={editingEvent.category || 'activity'} onChange={e => { const cat = e.target.value; const iconType = cat === 'transport' ? 'train' : cat === 'food' ? 'food' : cat === 'hotel' ? 'hotel' : 'camera'; setEditingEvent({...editingEvent, category: cat, iconType: iconType}); }} className="w-full bg-transparent border-b border-gray-300 py-2 text-base text-[#4a4a4a] focus:border-[#d4af37] focus:outline-none appearance-none font-serif">
+                        {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                    <div className="absolute right-0 top-3 pointer-events-none text-gray-400">▼</div>
+                </div>
+               </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-[#8c8c8c] font-medium mb-1 block">標題</label>
+              <input type="text" value={editingEvent.title} onChange={e => setEditingEvent({...editingEvent, title: e.target.value})} className="w-full bg-transparent border-b border-gray-300 py-2 text-lg font-bold text-gray-800 focus:outline-none font-serif"/>
+            </div>
+
+            <div>
+              <label className="text-xs text-[#8c8c8c] font-medium mb-1 block">副標題 / 說明</label>
+              <input type="text" value={editingEvent.sub || editingEvent.dest || ''} onChange={e => { const key = editingEvent.category === 'flight' ? 'dest' : 'sub'; setEditingEvent({...editingEvent, [key]: e.target.value}); }} className="w-full bg-transparent border-b border-gray-300 py-2 text-base text-gray-800 focus:outline-none font-serif" placeholder="例如：成田特快 / Skyliner"/>
+            </div>
+
+            <div>
+              <label className="text-xs text-[#8c8c8c] font-medium mb-1 block">地圖連結</label>
+              <input type="text" placeholder="https://maps.app.goo.gl/..." value={editingEvent.mapLink || ''} onChange={e => setEditingEvent({...editingEvent, mapLink: e.target.value})} className="w-full bg-transparent border-b border-gray-300 py-2 text-sm text-[#5a8bbd] focus:border-[#d4af37] focus:outline-none placeholder-gray-300"/>
+            </div>
+
+            <div>
+              <label className="text-xs text-[#8c8c8c] font-medium mb-1 block">備註</label>
+              <textarea rows={3} value={editingEvent.notes || ''} onChange={e => setEditingEvent({...editingEvent, notes: e.target.value})} className="w-full bg-transparent border-b border-gray-300 py-2 text-base text-gray-600 focus:outline-none resize-none" placeholder="備註事項..."/>
+            </div>
+
             <div className="flex items-center gap-3">
                <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold py-2 px-4 rounded-full flex items-center gap-1"><UploadCloud size={14}/> 選擇圖片 <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /></label>
             </div>
             {editingEvent.image && <img src={editingEvent.image} alt="Preview" className="w-full h-32 object-cover rounded-lg border border-gray-200" />}
+            
             <button onClick={handleSaveEvent} className="w-full bg-gray-800 hover:bg-black text-white py-3 rounded-lg font-bold">保存變更</button>
         </div>
       </div>
@@ -584,7 +648,7 @@ const TravelApp = () => {
   // Checklist Sync Logic (Per Member)
   useEffect(() => {
     if (!user || !db) return;
-    const checklistRef = doc(db, 'trips', APP_ID, 'data', `checklist_v37_${currentMember}`);
+    const checklistRef = doc(db, 'trips', APP_ID, 'data', `checklist_v39_${currentMember}`);
     const unsub = onSnapshot(checklistRef, (snap) => {
       if (snap.exists()) setChecklist(snap.data().list || INITIAL_CHECKLIST);
       else setDoc(checklistRef, { list: INITIAL_CHECKLIST });
@@ -618,20 +682,47 @@ const TravelApp = () => {
   }, [activeDate, activeTab]);
 
   const handleEventClick = (event, dateIndex) => { if (!event) return; setEditingEvent({ ...event, dateIndex }); setIsModalOpen(true); };
+  
+  // ✅ 新增行程按鈕邏輯
+  const handleAddItineraryEvent = (dateIndex) => {
+      const newEvent = {
+          id: Date.now().toString(), // 簡單的唯一 ID
+          time: "00:00", // 預設時間
+          title: "新行程",
+          category: "activity",
+          iconType: "camera",
+          notes: "",
+          dateIndex: dateIndex // 標記屬於哪一天
+      };
+      setEditingEvent(newEvent);
+      setIsModalOpen(true);
+  };
+
+  // ✅ 儲存並排序邏輯
   const handleSaveEvent = async () => {
     if (!editingEvent) return;
     const newItinerary = JSON.parse(JSON.stringify(itineraryData));
     if (newItinerary[editingEvent.dateIndex]) {
         const dayEvents = newItinerary[editingEvent.dateIndex].events;
         const eventIndex = dayEvents.findIndex(e => e.id === editingEvent.id);
+        
         if (eventIndex !== -1) {
+          // 更新現有行程
           dayEvents[eventIndex] = editingEvent; 
-          setItineraryData(newItinerary); 
-          if (db) await updateDoc(doc(db, 'trips', APP_ID, 'data', 'itinerary'), { data: newItinerary });
+        } else {
+          // 新增行程
+          dayEvents.push(editingEvent);
         }
+        
+        // 依時間排序
+        dayEvents.sort((a, b) => a.time.localeCompare(b.time));
+
+        setItineraryData(newItinerary); 
+        if (db) await updateDoc(doc(db, 'trips', APP_ID, 'data', 'itinerary'), { data: newItinerary });
     }
     setIsModalOpen(false);
   };
+  
   const handleDeleteEvent = async () => {
       if (!editingEvent || !confirm("確定要刪除這個行程嗎？")) return;
       const newItinerary = JSON.parse(JSON.stringify(itineraryData));
@@ -659,18 +750,18 @@ const TravelApp = () => {
       const updatedList = [newItem, ...checklist];
       setChecklist(updatedList);
       setNewItemText('');
-      if (db) await setDoc(doc(db, 'trips', APP_ID, 'data', `checklist_v37_${currentMember}`), { list: updatedList }, { merge: true });
+      if (db) await setDoc(doc(db, 'trips', APP_ID, 'data', `checklist_v39_${currentMember}`), { list: updatedList }, { merge: true });
   };
   const toggleChecklistItem = async (id) => {
       const updatedList = checklist.map(item => item.id === id ? { ...item, checked: !item.checked } : item);
       setChecklist(updatedList);
-      if (db) await setDoc(doc(db, 'trips', APP_ID, 'data', `checklist_v37_${currentMember}`), { list: updatedList }, { merge: true });
+      if (db) await setDoc(doc(db, 'trips', APP_ID, 'data', `checklist_v39_${currentMember}`), { list: updatedList }, { merge: true });
   };
   const deleteChecklistItem = async (id) => {
       if(!confirm("刪除此項目？")) return;
       const updatedList = checklist.filter(item => item.id !== id);
       setChecklist(updatedList);
-      if (db) await setDoc(doc(db, 'trips', APP_ID, 'data', `checklist_v37_${currentMember}`), { list: updatedList }, { merge: true });
+      if (db) await setDoc(doc(db, 'trips', APP_ID, 'data', `checklist_v39_${currentMember}`), { list: updatedList }, { merge: true });
   };
   const handleAddExpense = async () => {
     if (newExpenseName && newExpenseAmount && newExpenseDate) {
@@ -727,7 +818,7 @@ const TravelApp = () => {
             </div>
         </div>
         <div className="mt-4 px-4">
-            {activeTab === 'itinerary' && <ItineraryView currentDay={currentDay} weatherLoading={weatherLoading} liveWeather={liveWeather} weatherError={weatherError} activeDate={activeDate} setActiveDate={setActiveDate} handleEventClick={handleEventClick} />}
+            {activeTab === 'itinerary' && <ItineraryView currentDay={currentDay} weatherLoading={weatherLoading} liveWeather={liveWeather} weatherError={weatherError} activeDate={activeDate} setActiveDate={setActiveDate} handleEventClick={handleEventClick} handleAddItineraryEvent={handleAddItineraryEvent} />}
             {activeTab === 'budget' && <BudgetView expenses={expenses} exchangeRate={exchangeRate} payers={payers} newExpenseName={newExpenseName} setNewExpenseName={setNewExpenseName} newExpenseAmount={newExpenseAmount} setNewExpenseAmount={setNewExpenseAmount} newExpensePayer={newExpensePayer} setNewExpensePayer={setNewExpensePayer} newExpenseDate={newExpenseDate} setNewExpenseDate={setNewExpenseDate} handleAddExpense={handleAddExpense} handleDeleteExpense={handleDeleteExpense} exportToCSV={exportToCSV} />}
             {activeTab === 'checklist' && <ChecklistView currentMember={currentMember} setCurrentMember={setCurrentMember} checklist={checklist} newItemText={newItemText} setNewItemText={setNewItemText} handleAddChecklistItem={handleAddChecklistItem} toggleChecklistItem={toggleChecklistItem} deleteChecklistItem={deleteChecklistItem} />}
         </div>
