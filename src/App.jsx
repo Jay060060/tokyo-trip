@@ -70,6 +70,7 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
+// ✅ 關鍵修改：更換為全新的 ID，強制資料庫重新寫入完整資料
 const APP_ID = 'tokyo_trip_2025_final_v21'; 
 // ============================================================================
 
@@ -264,16 +265,16 @@ const TravelApp = () => {
   }, []);
 
   // Sync Logic
-  // 使用寫死的 APP_ID 'tokyo_trip_2025_v20'，避免變數 ReferenceError
+  // Force update to v21 path to restore full data
   useEffect(() => {
     if (!user || !db) return;
     
-    const itineraryRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'itinerary');
+    const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary');
     
     const unsub = onSnapshot(itineraryRef, (snap) => {
         setIsSyncing(false);
         if (snap.exists() && snap.data().data) setItineraryData(snap.data().data);
-        else setDoc(itineraryRef, { data: INITIAL_ITINERARY });
+        else setDoc(doc(db, 'trips', APP_ID, 'data', 'itinerary'), { data: INITIAL_ITINERARY });
     });
     return () => unsub();
   }, [user, db]);
@@ -281,7 +282,7 @@ const TravelApp = () => {
   // Sync Expenses
   useEffect(() => {
     if (!user || !db) return;
-    const expensesRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'expenses');
+    const expensesRef = doc(db, 'trips', APP_ID, 'data', 'expenses');
     const unsub = onSnapshot(expensesRef, (snap) => {
       if (snap.exists()) setExpenses(snap.data().list || []);
     });
@@ -291,7 +292,7 @@ const TravelApp = () => {
   // Sync Checklist
   useEffect(() => {
     if (!user || !db) return;
-    const checklistRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'checklist');
+    const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist');
     const unsub = onSnapshot(checklistRef, (snap) => {
       if (snap.exists()) setChecklist(snap.data().list || INITIAL_CHECKLIST);
       else setDoc(checklistRef, { list: INITIAL_CHECKLIST });
@@ -342,7 +343,7 @@ const TravelApp = () => {
           dayEvents[eventIndex] = editingEvent; 
           setItineraryData(newItinerary); 
           if (db) {
-            const itineraryRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'itinerary');
+            const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary');
             await updateDoc(itineraryRef, { data: newItinerary });
           }
         }
@@ -359,7 +360,7 @@ const TravelApp = () => {
           newItinerary[editingEvent.dateIndex].events = updatedEvents;
           setItineraryData(newItinerary);
           if (db) {
-            const itineraryRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'itinerary');
+            const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary');
             await updateDoc(itineraryRef, { data: newItinerary });
           }
       }
@@ -388,7 +389,7 @@ const TravelApp = () => {
       setChecklist(updatedList);
       setNewItemText('');
       if (db) {
-        const checklistRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'checklist');
+        const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist');
         await setDoc(checklistRef, { list: updatedList }, { merge: true });
       }
   };
@@ -399,7 +400,7 @@ const TravelApp = () => {
       );
       setChecklist(updatedList);
       if (db) {
-        const checklistRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'checklist');
+        const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist');
         await setDoc(checklistRef, { list: updatedList }, { merge: true });
       }
   };
@@ -409,7 +410,7 @@ const TravelApp = () => {
       const updatedList = checklist.filter(item => item.id !== id);
       setChecklist(updatedList);
       if (db) {
-        const checklistRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'checklist');
+        const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist');
         await setDoc(checklistRef, { list: updatedList }, { merge: true });
       }
   };
@@ -426,7 +427,7 @@ const TravelApp = () => {
       const updatedExpenses = [...expenses, newExpense];
       setExpenses(updatedExpenses);
       if (db) {
-        const expensesRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'expenses');
+        const expensesRef = doc(db, 'trips', APP_ID, 'data', 'expenses');
         await setDoc(expensesRef, { list: updatedExpenses }, { merge: true });
       }
       setNewExpenseName('');
@@ -439,7 +440,7 @@ const TravelApp = () => {
     const updatedExpenses = expenses.filter(e => e.timestamp !== timestamp);
     setExpenses(updatedExpenses);
     if (db) {
-      const expensesRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'expenses');
+      const expensesRef = doc(db, 'trips', APP_ID, 'data', 'expenses');
       await setDoc(expensesRef, { list: updatedExpenses }, { merge: true });
     }
   };
