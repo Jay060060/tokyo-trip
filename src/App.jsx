@@ -24,10 +24,46 @@ import {
   updateDoc
 } from 'firebase/firestore';
 
+// --- 1. Error Boundary (防白屏護盾) ---
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    this.setState({ error, errorInfo });
+    console.error("App Crash:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-gray-900 text-white p-8 flex flex-col items-center justify-center">
+          <div className="bg-red-900/30 border-2 border-red-500 rounded-2xl p-6 max-w-lg w-full">
+            <div className="flex items-center gap-3 mb-4 text-red-400">
+              <Bug size={32} />
+              <h1 className="text-2xl font-bold">程式發生錯誤</h1>
+            </div>
+            <p className="mb-4 text-gray-300">請截圖此畫面給我，以便除錯。</p>
+            <div className="bg-black/50 p-4 rounded-lg overflow-auto max-h-60 font-mono text-xs mb-4 border border-red-500/30">
+              <p className="text-red-300 font-bold mb-2">{this.state.error && this.state.error.toString()}</p>
+            </div>
+            <button onClick={() => window.location.reload()} className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold">重新整理</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children; 
+  }
+}
+
 // ============================================================================
 // ⚠️⚠️⚠️ 部署前請務必填寫此處！ ⚠️⚠️⚠️
-// 請前往 Firebase Console -> Project Settings -> General -> Your apps
-// 複製您的設定貼到下方，取代原本的字串：
 // ============================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
@@ -41,14 +77,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 // ============================================================================
 
-// --- 座標設定 ---
+// --- 資料與常數 ---
 const LOCATIONS = {
     tokyo: { lat: 35.6895, lon: 139.6917 },
     izu: { lat: 34.9714, lon: 139.0925 },
     shuzenji: { lat: 34.9773, lon: 138.9343 }
 };
 
-// --- 初始資料 ---
 const INITIAL_ITINERARY = [
   {
     date: "11/28 (五)",
@@ -178,8 +213,6 @@ const WeatherStrip = ({ hourlyWeather, isLoading, isError }) => (
     </div>
 );
 
-// --- 1. Error Boundary (防白屏護盾) - 已在最上方 ---
-
 // --- 主程式 ---
 const TravelApp = () => {
   const [activeTab, setActiveTab] = useState('itinerary');
@@ -195,17 +228,17 @@ const TravelApp = () => {
   const [expenses, setExpenses] = useState([]);
   const [checklist, setChecklist] = useState(INITIAL_CHECKLIST);
 
-  // UI States (之前缺漏的變數)
+  // UI States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   
-  // Budget States (之前缺漏的變數)
+  // Budget States
   const [newExpenseName, setNewExpenseName] = useState('');
   const [newExpenseAmount, setNewExpenseAmount] = useState('');
   const [newExpensePayer, setNewExpensePayer] = useState('Jay');
   const [newExpenseDate, setNewExpenseDate] = useState(new Date().toISOString().split('T')[0]);
   
-  // Checklist States (之前缺漏的變數)
+  // Checklist States
   const [newItemText, setNewItemText] = useState('');
 
   // Constants
@@ -617,7 +650,7 @@ const TravelApp = () => {
                         <div className="border-t border-white/10 pt-2">
                             <div className="text-xs text-gray-400 mb-1 flex items-center gap-1 justify-between">
                                 <span className="flex items-center gap-1"><CloudRain size={10}/> 24小時預報 (即時)</span>
-                                <span className="text-[10px] opacity-50">{currentData.location}</span>
+                                <span className="text-[10px] opacity-50">{currentDay.location}</span>
                             </div>
                             <WeatherStrip hourlyWeather={liveWeather.hourly} isLoading={weatherLoading} isError={weatherError} />
                         </div>
