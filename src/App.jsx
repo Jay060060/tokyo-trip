@@ -5,7 +5,7 @@ import {
   FileText, Link as LinkIcon, Plus, X, Wallet, Globe, Languages,
   Loader2, Trash2, Image as ImageIcon, Check, UploadCloud, 
   CloudRain, Cloud, Wind, Umbrella, Shirt, CloudSun, RefreshCw, Wifi, AlertTriangle,
-  Bug, RotateCcw
+  Bug
 } from 'lucide-react';
 
 // --- Firebase Imports ---
@@ -63,7 +63,7 @@ class ErrorBoundary extends React.Component {
 }
 
 // ============================================================================
-// ✅ 金鑰設定
+// ✅ 金鑰設定 (已填入)
 // ============================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
@@ -74,8 +74,8 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-// ✅ 使用 v25 ID
-const APP_ID = 'tokyo_trip_v25_emergency'; 
+// ✅ 關鍵修改：使用 v27 全新 ID，避開幽靈檔案
+const APP_ID = 'tokyo_trip_v27_clean'; 
 // ============================================================================
 
 // --- 資料與常數 ---
@@ -85,7 +85,6 @@ const LOCATIONS = {
     shuzenji: { lat: 34.9773, lon: 138.9343 }
 };
 
-// ⚠️ 完整 5 天行程資料 ⚠️
 const INITIAL_ITINERARY = [
   {
     date: "11/28 (五)",
@@ -167,7 +166,7 @@ const INITIAL_ITINERARY = [
 
 const INITIAL_CHECKLIST = [{ id: 1, text: "護照", checked: false }, { id: 2, text: "機票", checked: false }];
 
-// --- 輔助元件 (圖示與類別) ---
+// --- 輔助元件 ---
 const IconMap = ({ type, size = 16 }) => {
   switch (type) {
     case 'food': return <Utensils size={size} />;
@@ -264,23 +263,8 @@ const TravelApp = () => {
     }
   }, []);
 
-  // --- Force Reset Handler ---
-  const handleForceReset = async () => {
-      if (!confirm("確定要重置所有資料嗎？這將會恢復為預設的 5 天行程，並清除所有自訂修改。")) return;
-      if (!db) return;
-      
-      try {
-          await setDoc(doc(db, 'trips', APP_ID, 'data', 'itinerary'), { data: INITIAL_ITINERARY });
-          await setDoc(doc(db, 'trips', APP_ID, 'data', 'checklist'), { list: INITIAL_CHECKLIST });
-          await setDoc(doc(db, 'trips', APP_ID, 'data', 'expenses'), { list: [] });
-          alert("資料已重置！");
-          window.location.reload();
-      } catch (e) {
-          alert("重置失敗：" + e.message);
-      }
-  };
-
   // Sync Logic
+  // Force update to v27 path to restore full data
   useEffect(() => {
     if (!user || !db) return;
     
@@ -288,8 +272,17 @@ const TravelApp = () => {
     
     const unsub = onSnapshot(itineraryRef, (snap) => {
         setIsSyncing(false);
-        if (snap.exists() && snap.data().data) setItineraryData(snap.data().data);
-        else setDoc(doc(db, 'trips', APP_ID, 'data', 'itinerary'), { data: INITIAL_ITINERARY });
+        if (snap.exists() && snap.data().data) {
+            // 雙重檢查：如果抓下來的資料是空陣列或只有一筆，就用預設值覆蓋
+            const data = snap.data().data;
+            if (Array.isArray(data) && data.length >= 5) {
+                setItineraryData(data);
+            } else {
+                setDoc(itineraryRef, { data: INITIAL_ITINERARY });
+            }
+        } else {
+            setDoc(itineraryRef, { data: INITIAL_ITINERARY });
+        }
     });
     return () => unsub();
   }, [user, db]);
@@ -937,10 +930,6 @@ const TravelApp = () => {
           <div className="flex justify-end pointer-events-auto">
             <button onClick={handleTranslateClick} className="group flex items-center gap-2 bg-white text-indigo-900 pr-5 pl-4 py-3 rounded-full shadow-2xl shadow-purple-500/40 hover:scale-105 transition-all border-4 border-indigo-100/20 active:scale-95">
                <Languages size={24} className="group-hover:rotate-12 transition-transform"/><span className="font-bold text-lg">翻譯</span>
-            </button>
-            {/* 強制重置按鈕 - 救援用 */}
-            <button onClick={handleForceReset} className="group flex items-center gap-2 bg-red-600 text-white px-3 py-1 rounded-full shadow-lg hover:scale-105 active:scale-95 text-xs absolute -bottom-8 right-0 pointer-events-auto opacity-50 hover:opacity-100 transition-all">
-               <RotateCcw size={12}/> 重置資料
             </button>
           </div>
         </div>
