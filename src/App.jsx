@@ -74,7 +74,6 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-// ✅ 強制使用純文字 ID，避免斜線造成路徑錯誤
 const app = initializeApp(firebaseConfig);
 // ============================================================================
 
