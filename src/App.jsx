@@ -69,6 +69,8 @@ const firebaseConfig = {
   messagingSenderId: "291700650556",
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
+
+const app = initializeApp(firebaseConfig);
 // ============================================================================
 
 // --- 資料與常數 ---
