@@ -43,13 +43,17 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ minHeight: '100vh', backgroundColor: '#111827', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ backgroundColor: 'rgba(127, 29, 29, 0.2)', border: '2px solid #ef4444', borderRadius: '16px', padding: '24px', maxWidth: '500px', width: '100%' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', color: '#f87171' }}>程式發生錯誤</h1>
-            <div style={{ backgroundColor: 'rgba(0,0,0,0.5)', padding: '16px', borderRadius: '8px', overflow: 'auto', maxHeight: '240px', marginBottom: '16px', fontFamily: 'monospace', fontSize: '12px' }}>
-              <p style={{ color: '#fca5a5', margin: 0 }}>{this.state.error && this.state.error.toString()}</p>
+        <div className="min-h-screen bg-gray-900 text-white p-8 flex flex-col items-center justify-center">
+          <div className="bg-red-900/30 border-2 border-red-500 rounded-2xl p-6 max-w-lg w-full">
+            <div className="flex items-center gap-3 mb-4 text-red-400">
+              <Bug size={32} />
+              <h1 className="text-2xl font-bold">程式發生錯誤</h1>
             </div>
-            <button onClick={() => window.location.reload()} style={{ width: '100%', backgroundColor: '#dc2626', color: 'white', padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>重新整理</button>
+            <p className="mb-4 text-gray-300">請截圖此畫面給我，以便除錯。</p>
+            <div className="bg-black/50 p-4 rounded-lg overflow-auto max-h-60 font-mono text-xs mb-4 border border-red-500/30">
+              <p className="text-red-300 font-bold mb-2">{this.state.error && this.state.error.toString()}</p>
+            </div>
+            <button onClick={() => window.location.reload()} className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold">重新整理</button>
           </div>
         </div>
       );
@@ -59,7 +63,7 @@ class ErrorBoundary extends React.Component {
 }
 
 // ============================================================================
-// ⚠️⚠️⚠️ 部署前請務必填寫此處！ ⚠️⚠️⚠️
+// ✅ 我已經幫您填好金鑰了，直接使用即可，不用修改！
 // ============================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
@@ -70,8 +74,8 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-// ✅ 關鍵修改：更換為全新的 ID，強制資料庫重新寫入完整資料
-const APP_ID = 'tokyo_trip_2025_final_v21'; 
+// ✅ 全新 ID v22，確保讀取全新完整的 5 天資料
+const APP_ID = 'tokyo_trip_2025_final_v22'; 
 // ============================================================================
 
 // --- 資料與常數 ---
@@ -81,6 +85,7 @@ const LOCATIONS = {
     shuzenji: { lat: 34.9773, lon: 138.9343 }
 };
 
+// ⚠️ 這裡保證是完整的 5 天資料 ⚠️
 const INITIAL_ITINERARY = [
   {
     date: "11/28 (五)",
@@ -244,13 +249,8 @@ const TravelApp = () => {
 
   // Firebase Init
   const [db, setDb] = useState(null);
-  const isConfigValid = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("YOUR_API_KEY");
-
+  
   useEffect(() => {
-    if (!isConfigValid) {
-        setIsSyncing(false);
-        return;
-    }
     try {
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -265,7 +265,7 @@ const TravelApp = () => {
   }, []);
 
   // Sync Logic
-  // Force update to v21 path to restore full data
+  // Force update to v22 path to restore full data
   useEffect(() => {
     if (!user || !db) return;
     
@@ -466,18 +466,6 @@ const TravelApp = () => {
   const handleTranslateClick = () => {
     window.open("https://apps.apple.com/tw/app/%E7%BF%BB%E8%AD%AF/id1514844618", "_blank");
   };
-
-  if (!isConfigValid) {
-      return (
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 text-white">
-            <div className="bg-red-900/50 border border-red-500 p-6 rounded-xl text-center max-w-sm">
-                <AlertTriangle size={48} className="mx-auto mb-4 text-red-400"/>
-                <h2 className="text-xl font-bold mb-2">設定未完成</h2>
-                <p className="text-sm text-gray-300">請在程式碼中填入 Firebase 設定，App 才能運作。</p>
-            </div>
-        </div>
-      );
-  }
 
   const currentDay = itineraryData[activeDate] || INITIAL_ITINERARY[activeDate];
 
