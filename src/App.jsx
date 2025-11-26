@@ -24,6 +24,39 @@ import {
   updateDoc
 } from 'firebase/firestore';
 
+// --- 1. Error Boundary (最外層防護) ---
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Critical Error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', backgroundColor: '#1a1a1a', color: 'white', height: '100vh' }}>
+          <h1>⚠️ 應用程式發生錯誤</h1>
+          <pre style={{ background: '#333', padding: '10px', borderRadius: '5px' }}>
+            {this.state.error?.toString()}
+          </pre>
+          <button onClick={() => window.location.reload()} style={{ marginTop: '20px', padding: '10px', background: 'red', color: 'white', border: 'none' }}>
+            重新整理
+          </button>
+        </div>
+      );
+    }
+    return this.props.children; 
+  }
+}
+
 // ============================================================================
 // ✅ 金鑰設定 (已填入)
 // ============================================================================
@@ -36,8 +69,8 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-// ✅ v34 全新 ID，確保乾淨開始
-const APP_ID = 'tokyo_trip_v34_clean'; 
+// ✅ v35 全新 ID
+const APP_ID = 'tokyo_trip_v35_final_rescue'; 
 // ============================================================================
 
 // --- 資料與常數 ---
@@ -128,14 +161,7 @@ const INITIAL_ITINERARY = [
 
 const INITIAL_CHECKLIST = [{ id: 1, text: "護照", checked: false }, { id: 2, text: "機票", checked: false }];
 
-const CATEGORIES = [
-    { value: 'food', label: '午餐/晚餐' },
-    { value: 'activity', label: '景點/活動' },
-    { value: 'transport', label: '交通/移動' },
-    { value: 'hotel', label: '住宿/飯店' },
-    { value: 'shopping', label: '購物' },
-];
-
+// --- 輔助元件 (圖示與類別) ---
 const IconMap = ({ type, size = 16 }) => {
   switch (type) {
     case 'food': return <Utensils size={size} />;
@@ -152,6 +178,14 @@ const IconMap = ({ type, size = 16 }) => {
   }
 };
 
+const CATEGORIES = [
+    { value: 'food', label: '午餐/晚餐' },
+    { value: 'activity', label: '景點/活動' },
+    { value: 'transport', label: '交通/移動' },
+    { value: 'hotel', label: '住宿/飯店' },
+    { value: 'shopping', label: '購物' },
+];
+
 const getWeatherIcon = (c, size=14) => {
     if (c === 0) return <Sun size={size} />;
     if (c >= 1 && c <= 3) return <CloudSun size={size} />;
@@ -161,19 +195,19 @@ const getWeatherIcon = (c, size=14) => {
     return <Cloud size={size} />;
 };
 
-// --- 子元件定義 (移出主元件以修復輸入問題) ---
+// --- 子元件定義 ---
 
 const WeatherStrip = ({ hourlyWeather, isLoading, isError }) => (
     <div className="flex space-x-4 overflow-x-auto pb-2 no-scrollbar mt-3 min-h-[4rem]">
         {isLoading ? <div className="text-xs text-gray-400 w-full text-center"><Loader2 className="animate-spin inline mr-1"/>載入中...</div> : 
          isError ? <div className="text-xs text-red-300 w-full text-center"><Wifi className="inline mr-1"/>無法連線</div> :
-         hourlyWeather.map((w, i) => (
+         hourlyWeather && hourlyWeather.length > 0 ? hourlyWeather.map((w, i) => (
             <div key={i} className="flex flex-col items-center min-w-[3rem] bg-white/10 rounded-lg p-2 flex-shrink-0 border border-white/5">
                 <span className="text-[10px] text-gray-300">{w.time}</span>
                 <div className="text-yellow-300 my-1">{getWeatherIcon(w.code)}</div>
                 <span className="text-xs font-bold">{w.temp}°</span>
             </div>
-         ))}
+         )) : null}
     </div>
 );
 
@@ -183,66 +217,26 @@ const ChecklistView = ({ checklist, newItemText, setNewItemText, handleAddCheckl
             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-white">
                 <Check size={24} className="text-green-400"/> 行李清單
             </h2>
-            
             <div className="flex gap-2 mb-6">
-                <input 
-                    type="text" 
-                    placeholder="輸入想帶的物品..." 
-                    value={newItemText}
-                    onChange={(e) => setNewItemText(e.target.value)}
-                    className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-colors shadow-inner"
-                />
-                <button 
-                    onClick={handleAddChecklistItem}
-                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-xl px-4 flex items-center justify-center transition-colors shadow-lg"
-                >
-                    <Plus size={20}/>
-                </button>
+                <input type="text" placeholder="輸入想帶的物品..." value={newItemText} onChange={(e) => setNewItemText(e.target.value)} className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-colors shadow-inner"/>
+                <button onClick={handleAddChecklistItem} className="bg-purple-500 hover:bg-purple-600 text-white rounded-xl px-4 flex items-center justify-center transition-colors shadow-lg"><Plus size={20}/></button>
             </div>
-
             <div className="space-y-3">
                 {checklist.map((item) => (
-                    <div 
-                        key={item.id} 
-                        className="group flex items-center justify-between bg-white/5 p-3 rounded-xl hover:bg-white/10 transition-all border border-white/5 shadow-sm"
-                    >
-                        <div 
-                            className="flex items-center flex-1 cursor-pointer"
-                            onClick={() => toggleChecklistItem(item.id)}
-                        >
-                            <div className={`w-6 h-6 rounded-md border-2 mr-3 flex items-center justify-center transition-all ${item.checked ? 'bg-green-500 border-green-500' : 'border-gray-500 bg-transparent'}`}>
-                                {item.checked && <Check size={14} className="text-white" />}
-                            </div>
+                    <div key={item.id} className="group flex items-center justify-between bg-white/5 p-3 rounded-xl hover:bg-white/10 transition-all border border-white/5 shadow-sm">
+                        <div className="flex items-center flex-1 cursor-pointer" onClick={() => toggleChecklistItem(item.id)}>
+                            <div className={`w-6 h-6 rounded-md border-2 mr-3 flex items-center justify-center transition-all ${item.checked ? 'bg-green-500 border-green-500' : 'border-gray-500 bg-transparent'}`}>{item.checked && <Check size={14} className="text-white" />}</div>
                             <span className={`text-base transition-all ${item.checked ? 'text-gray-500 line-through decoration-2 decoration-gray-600' : 'text-white'}`}>{item.text}</span>
                         </div>
-                        <button 
-                            onClick={() => deleteChecklistItem(item.id)}
-                            className="text-gray-600 hover:text-red-400 p-2 rounded-full hover:bg-white/5 transition-colors opacity-50 group-hover:opacity-100"
-                        >
-                            <Trash2 size={16}/>
-                        </button>
+                        <button onClick={() => deleteChecklistItem(item.id)} className="text-gray-600 hover:text-red-400 p-2 rounded-full hover:bg-white/5 transition-colors opacity-50 group-hover:opacity-100"><Trash2 size={16}/></button>
                     </div>
                 ))}
-                {checklist.length === 0 && (
-                    <div className="text-center text-gray-500 py-8">清單是空的，加點東西吧！</div>
-                )}
             </div>
         </div>
     </div>
 );
 
-const BudgetView = ({ 
-    expenses, 
-    exchangeRate, 
-    payers, 
-    newExpenseName, setNewExpenseName, 
-    newExpenseAmount, setNewExpenseAmount, 
-    newExpensePayer, setNewExpensePayer, 
-    newExpenseDate, setNewExpenseDate,
-    handleAddExpense, 
-    handleDeleteExpense, 
-    exportToCSV 
-}) => {
+const BudgetView = ({ expenses, exchangeRate, payers, newExpenseName, setNewExpenseName, newExpenseAmount, setNewExpenseAmount, newExpensePayer, setNewExpensePayer, newExpenseDate, setNewExpenseDate, handleAddExpense, handleDeleteExpense, exportToCSV }) => {
     const totalYen = expenses.reduce((acc, cur) => acc + cur.amount, 0);
     const totalTwd = Math.round(totalYen * exchangeRate);
     const payerStats = payers.reduce((acc, payer) => {
@@ -253,13 +247,10 @@ const BudgetView = ({
     return (
       <div className="px-4 pb-20 pt-4 animate-fade-in select-none">
         <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 shadow-xl mb-6 text-center relative overflow-hidden border border-white/10">
-          <button onClick={exportToCSV} className="absolute top-4 right-4 bg-white/20 p-2 rounded-lg hover:bg-white/30 active:scale-95 transition-all text-white flex items-center gap-1 text-xs">
-             <FileText size={14}/> 匯出
-          </button>
+          <button onClick={exportToCSV} className="absolute top-4 right-4 bg-white/20 p-2 rounded-lg hover:bg-white/30 active:scale-95 transition-all text-white flex items-center gap-1 text-xs"><FileText size={14}/> 匯出</button>
           <div className="text-gray-200 text-sm mb-1 mt-2">總支出 Total</div>
           <div className="text-4xl font-bold mb-2 font-mono">¥ {totalYen.toLocaleString()}</div>
           <div className="text-xl text-purple-200 font-medium">≈ NT$ {totalTwd.toLocaleString()}</div>
-          
           <div className="mt-6 grid grid-cols-2 gap-3">
              {payers.map(payer => (
                <div key={payer} className="bg-white/10 px-3 py-2 rounded-xl backdrop-blur-sm border border-white/5 text-left">
@@ -269,17 +260,11 @@ const BudgetView = ({
              ))}
           </div>
         </div>
-
         <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 mb-4 border border-white/5">
           <div className="text-lg font-bold mb-4 flex items-center"><Plus size={18} className="mr-2"/> 新增消費</div>
           <div className="space-y-3">
             <div className="flex gap-3">
-                <input 
-                    type="date" 
-                    value={newExpenseDate}
-                    onChange={(e) => setNewExpenseDate(e.target.value)}
-                    className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-400"
-                />
+                <input type="date" value={newExpenseDate} onChange={(e) => setNewExpenseDate(e.target.value)} className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-400"/>
             </div>
             <input type="text" placeholder="項目 (例: 淺草炸肉餅)" value={newExpenseName} onChange={(e) => setNewExpenseName(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"/>
             <div className="flex gap-3">
@@ -296,7 +281,6 @@ const BudgetView = ({
             <button onClick={handleAddExpense} className="w-full bg-purple-500 hover:bg-purple-400 text-white rounded-xl py-3 font-bold flex items-center justify-center transition-colors shadow-lg shadow-purple-500/30">新增紀錄</button>
           </div>
         </div>
-        
         <div className="space-y-3">
           {expenses.slice().sort((a, b) => new Date(b.date) - new Date(a.date) || new Date(b.timestamp) - new Date(a.timestamp)).map((item, idx) => (
               <div key={idx} className="bg-white/5 p-4 rounded-xl flex justify-between items-center border border-white/5">
@@ -305,19 +289,11 @@ const BudgetView = ({
                         <span className="font-bold text-white">{item.date ? item.date.split('-')[2] : '--'}</span>
                         <span className="text-[10px]">{item.date ? item.date.split('-')[1] + '月' : ''}</span>
                     </div>
-                    <div className="font-medium">
-                        {item.name}
-                        <div className="text-xs text-gray-400 mt-0.5">{item.payer} 代付</div>
-                    </div>
+                    <div className="font-medium">{item.name}<div className="text-xs text-gray-400 mt-0.5">{item.payer} 代付</div></div>
                  </div>
                  <div className="flex items-center gap-3">
                     <div className="font-bold font-mono text-lg">¥ {item.amount.toLocaleString()}</div>
-                    <button 
-                        onClick={() => handleDeleteExpense(item.timestamp)}
-                        className="text-gray-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-                    >
-                        <Trash2 size={16}/>
-                    </button>
+                    <button onClick={() => handleDeleteExpense(item.timestamp)} className="text-gray-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/10 transition-colors"><Trash2 size={16}/></button>
                  </div>
               </div>
           ))}
@@ -326,20 +302,10 @@ const BudgetView = ({
     );
 };
 
-const ItineraryView = ({ 
-    currentDay, 
-    weatherLoading, 
-    liveWeather, 
-    weatherError, 
-    activeDate, 
-    setActiveDate, 
-    handleEventClick 
-}) => {
+const ItineraryView = ({ currentDay, weatherLoading, liveWeather, weatherError, activeDate, setActiveDate, handleEventClick }) => {
     const events = Array.isArray(currentDay.events) ? currentDay.events : [];
-
     return (
       <div className="px-4 pb-28 pt-2">
-        {/* Date Selector */}
         <div className="flex overflow-x-auto gap-3 mb-6 pb-2 no-scrollbar">
             {["11/28", "11/29", "11/30", "12/01", "12/02"].map((d, i) => (
                 <button key={i} onClick={() => setActiveDate(i)} className={`flex-shrink-0 w-16 h-20 rounded-xl flex flex-col items-center justify-center border ${activeDate===i ? 'bg-purple-600 border-purple-400 text-white' : 'bg-white/5 border-white/10 text-gray-400'}`}>
@@ -348,8 +314,6 @@ const ItineraryView = ({
                 </button>
             ))}
         </div>
-
-        {/* Header Section */}
         <div className="bg-gradient-to-br from-purple-900/80 to-indigo-900/80 backdrop-blur-md rounded-3xl p-6 mb-8 border border-white/10 shadow-xl relative overflow-hidden select-none">
           <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-2 py-1 rounded-bl-xl font-bold flex items-center gap-1 shadow-lg z-10">
              <RefreshCw size={10} className={weatherLoading ? "animate-spin" : ""}/> 
@@ -367,13 +331,7 @@ const ItineraryView = ({
                 </p>
               </div>
               <div className="text-center min-w-[5rem] flex flex-col items-end">
-                 {weatherLoading ? (
-                     <Loader2 size={40} className="mb-1 text-white animate-spin"/>
-                 ) : (
-                     <div className="text-yellow-300 drop-shadow-lg">
-                        {getWeatherIcon(liveWeather.conditionCode, 48)}
-                     </div>
-                 )}
+                 {weatherLoading ? <Loader2 size={40} className="mb-1 text-white animate-spin"/> : <div className="text-yellow-300 drop-shadow-lg">{getWeatherIcon(liveWeather.conditionCode, 48)}</div>}
                  <span className="text-4xl font-bold font-mono block mt-1 drop-shadow-md">{liveWeather.temp}</span>
               </div>
           </div>
@@ -385,8 +343,6 @@ const ItineraryView = ({
               <WeatherStrip hourlyWeather={liveWeather.hourly} isLoading={weatherLoading} isError={weatherError} />
           </div>
         </div>
-
-        {/* Events List */}
         <div className="space-y-8 relative pl-2">
           <div className="absolute left-[3.8rem] top-6 bottom-6 w-0.5 bg-gradient-to-b from-indigo-500/20 via-purple-500/50 to-indigo-500/20 rounded-full"></div>
           {events.map((event, idx) => (
@@ -480,14 +436,15 @@ const TravelApp = () => {
     }
   }, []);
 
+  // Sync Logic with Auto-Fix
   useEffect(() => {
     if (!user || !db) return;
-    
     const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary');
     const unsub = onSnapshot(itineraryRef, (snap) => {
         setIsSyncing(false);
         if (snap.exists()) {
             const data = snap.data().data;
+            // 安全檢查：如果資料庫少於 5 天，自動用預設資料修復
             if (Array.isArray(data) && data.length >= 5) {
                 setItineraryData(data);
             } else {
@@ -627,6 +584,7 @@ const TravelApp = () => {
     link.click();
     document.body.removeChild(link);
   };
+  const handleTranslateClick = () => { window.open("https://apps.apple.com/tw/app/%E7%BF%BB%E8%AD%AF/id1514844618", "_blank"); };
 
   const currentDay = itineraryData[activeDate] || INITIAL_ITINERARY[activeDate];
 
@@ -639,7 +597,6 @@ const TravelApp = () => {
             </div>
             <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center"><Share size={14}/></div>
         </div>
-
         <div className="px-4 mt-4">
             <div className="flex bg-white/5 p-1 rounded-xl">
                 {['itinerary', 'budget', 'checklist'].map(t => (
@@ -649,61 +606,19 @@ const TravelApp = () => {
                 ))}
             </div>
         </div>
-
         <div className="mt-4 px-4">
-            {activeTab === 'itinerary' && (
-                <ItineraryView 
-                    currentDay={currentDay} 
-                    weatherLoading={weatherLoading} 
-                    liveWeather={liveWeather} 
-                    weatherError={weatherError} 
-                    activeDate={activeDate} 
-                    setActiveDate={setActiveDate} 
-                    handleEventClick={handleEventClick}
-                />
-            )}
-            {activeTab === 'budget' && (
-                <BudgetView 
-                    expenses={expenses}
-                    exchangeRate={exchangeRate}
-                    payers={payers}
-                    newExpenseName={newExpenseName} setNewExpenseName={setNewExpenseName}
-                    newExpenseAmount={newExpenseAmount} setNewExpenseAmount={setNewExpenseAmount}
-                    newExpensePayer={newExpensePayer} setNewExpensePayer={setNewExpensePayer}
-                    newExpenseDate={newExpenseDate} setNewExpenseDate={setNewExpenseDate}
-                    handleAddExpense={handleAddExpense}
-                    handleDeleteExpense={handleDeleteExpense}
-                    exportToCSV={exportToCSV}
-                />
-            )}
-            {activeTab === 'checklist' && (
-                <ChecklistView 
-                    checklist={checklist}
-                    newItemText={newItemText} setNewItemText={setNewItemText}
-                    handleAddChecklistItem={handleAddChecklistItem}
-                    toggleChecklistItem={toggleChecklistItem}
-                    deleteChecklistItem={deleteChecklistItem}
-                />
-            )}
+            {activeTab === 'itinerary' && <ItineraryView currentDay={currentDay} weatherLoading={weatherLoading} liveWeather={liveWeather} weatherError={weatherError} activeDate={activeDate} setActiveDate={setActiveDate} handleEventClick={handleEventClick} />}
+            {activeTab === 'budget' && <BudgetView expenses={expenses} exchangeRate={exchangeRate} payers={payers} newExpenseName={newExpenseName} setNewExpenseName={setNewExpenseName} newExpenseAmount={newExpenseAmount} setNewExpenseAmount={setNewExpenseAmount} newExpensePayer={newExpensePayer} setNewExpensePayer={setNewExpensePayer} newExpenseDate={newExpenseDate} setNewExpenseDate={setNewExpenseDate} handleAddExpense={handleAddExpense} handleDeleteExpense={handleDeleteExpense} exportToCSV={exportToCSV} />}
+            {activeTab === 'checklist' && <ChecklistView checklist={checklist} newItemText={newItemText} setNewItemText={setNewItemText} handleAddChecklistItem={handleAddChecklistItem} toggleChecklistItem={toggleChecklistItem} deleteChecklistItem={deleteChecklistItem} />}
         </div>
-
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-md px-6 z-40 pointer-events-none">
           <div className="flex justify-end pointer-events-auto">
-            <button onClick={() => window.open("https://apps.apple.com/tw/app/%E7%BF%BB%E8%AD%AF/id1514844618", "_blank")} className="group flex items-center gap-2 bg-white text-indigo-900 pr-5 pl-4 py-3 rounded-full shadow-2xl shadow-purple-500/40 hover:scale-105 transition-all border-4 border-indigo-100/20 active:scale-95">
+            <button onClick={handleTranslateClick} className="group flex items-center gap-2 bg-white text-indigo-900 pr-5 pl-4 py-3 rounded-full shadow-2xl shadow-purple-500/40 hover:scale-105 transition-all border-4 border-indigo-100/20 active:scale-95">
                <Languages size={24} className="group-hover:rotate-12 transition-transform"/><span className="font-bold text-lg">翻譯</span>
             </button>
           </div>
         </div>
-
-        <EditModal 
-            isModalOpen={isModalOpen}
-            editingEvent={editingEvent}
-            setEditingEvent={setEditingEvent}
-            handleDeleteEvent={handleDeleteEvent}
-            handleSaveEvent={handleSaveEvent}
-            handleImageUpload={handleImageUpload}
-            setIsModalOpen={setIsModalOpen}
-        />
+        <EditModal isModalOpen={isModalOpen} editingEvent={editingEvent} setEditingEvent={setEditingEvent} handleDeleteEvent={handleDeleteEvent} handleSaveEvent={handleSaveEvent} handleImageUpload={handleImageUpload} setIsModalOpen={setIsModalOpen} />
     </div>
   );
 };
