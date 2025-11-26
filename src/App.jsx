@@ -24,22 +24,6 @@ import {
   updateDoc
 } from 'firebase/firestore';
 
-// ============================================================================
-// ⚠️⚠️⚠️ 部署前請務必填寫此處！ ⚠️⚠️⚠️
-// ============================================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
-  authDomain: "tokyo-izu.firebaseapp.com",
-  projectId: "tokyo-izu",
-  storageBucket: "tokyo-izu.firebasestorage.app",
-  messagingSenderId: "291700650556",
-  appId: "1:291700650556:web:82303d66deaa02e93d4939"
-};
-
-// ✅ 直接定義，不依賴任何環境變數，保證上傳成功
-const app = initializeApp(firebaseConfig);
-// ============================================================================
-
 // --- 1. Error Boundary (防白屏護盾) ---
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -73,6 +57,19 @@ class ErrorBoundary extends React.Component {
     return this.props.children; 
   }
 }
+
+// ============================================================================
+// ⚠️⚠️⚠️ 部署前請務必填寫此處！ ⚠️⚠️⚠️
+// ============================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
+  authDomain: "tokyo-izu.firebaseapp.com",
+  projectId: "tokyo-izu",
+  storageBucket: "tokyo-izu.firebasestorage.app",
+  messagingSenderId: "291700650556",
+  appId: "1:291700650556:web:82303d66deaa02e93d4939"
+};
+// ============================================================================
 
 // --- 資料與常數 ---
 const LOCATIONS = {
@@ -265,16 +262,16 @@ const TravelApp = () => {
   }, []);
 
   // Sync Logic
-  // Force update to v18_final path
+  // 使用寫死的 APP_ID 'tokyo_trip_2025_v20'，避免變數 ReferenceError
   useEffect(() => {
     if (!user || !db) return;
     
-    const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary_v18_final');
+    const itineraryRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'itinerary');
     
     const unsub = onSnapshot(itineraryRef, (snap) => {
         setIsSyncing(false);
         if (snap.exists() && snap.data().data) setItineraryData(snap.data().data);
-        else setDoc(doc(db, 'trips', APP_ID, 'data', 'itinerary_v18_final'), { data: INITIAL_ITINERARY });
+        else setDoc(itineraryRef, { data: INITIAL_ITINERARY });
     });
     return () => unsub();
   }, [user, db]);
@@ -282,7 +279,7 @@ const TravelApp = () => {
   // Sync Expenses
   useEffect(() => {
     if (!user || !db) return;
-    const expensesRef = doc(db, 'trips', APP_ID, 'data', 'expenses_v18_final');
+    const expensesRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'expenses');
     const unsub = onSnapshot(expensesRef, (snap) => {
       if (snap.exists()) setExpenses(snap.data().list || []);
     });
@@ -292,7 +289,7 @@ const TravelApp = () => {
   // Sync Checklist
   useEffect(() => {
     if (!user || !db) return;
-    const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist_v18_final');
+    const checklistRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'checklist');
     const unsub = onSnapshot(checklistRef, (snap) => {
       if (snap.exists()) setChecklist(snap.data().list || INITIAL_CHECKLIST);
       else setDoc(checklistRef, { list: INITIAL_CHECKLIST });
@@ -343,7 +340,7 @@ const TravelApp = () => {
           dayEvents[eventIndex] = editingEvent; 
           setItineraryData(newItinerary); 
           if (db) {
-            const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary_v18_final');
+            const itineraryRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'itinerary');
             await updateDoc(itineraryRef, { data: newItinerary });
           }
         }
@@ -360,7 +357,7 @@ const TravelApp = () => {
           newItinerary[editingEvent.dateIndex].events = updatedEvents;
           setItineraryData(newItinerary);
           if (db) {
-            const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary_v18_final');
+            const itineraryRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'itinerary');
             await updateDoc(itineraryRef, { data: newItinerary });
           }
       }
@@ -389,7 +386,7 @@ const TravelApp = () => {
       setChecklist(updatedList);
       setNewItemText('');
       if (db) {
-        const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist_v18_final');
+        const checklistRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'checklist');
         await setDoc(checklistRef, { list: updatedList }, { merge: true });
       }
   };
@@ -400,7 +397,7 @@ const TravelApp = () => {
       );
       setChecklist(updatedList);
       if (db) {
-        const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist_v18_final');
+        const checklistRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'checklist');
         await setDoc(checklistRef, { list: updatedList }, { merge: true });
       }
   };
@@ -410,7 +407,7 @@ const TravelApp = () => {
       const updatedList = checklist.filter(item => item.id !== id);
       setChecklist(updatedList);
       if (db) {
-        const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist_v18_final');
+        const checklistRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'checklist');
         await setDoc(checklistRef, { list: updatedList }, { merge: true });
       }
   };
@@ -427,7 +424,7 @@ const TravelApp = () => {
       const updatedExpenses = [...expenses, newExpense];
       setExpenses(updatedExpenses);
       if (db) {
-        const expensesRef = doc(db, 'trips', APP_ID, 'data', 'expenses_v18_final');
+        const expensesRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'expenses');
         await setDoc(expensesRef, { list: updatedExpenses }, { merge: true });
       }
       setNewExpenseName('');
@@ -440,7 +437,7 @@ const TravelApp = () => {
     const updatedExpenses = expenses.filter(e => e.timestamp !== timestamp);
     setExpenses(updatedExpenses);
     if (db) {
-      const expensesRef = doc(db, 'trips', APP_ID, 'data', 'expenses_v18_final');
+      const expensesRef = doc(db, 'trips', 'tokyo_trip_2025_v20', 'data', 'expenses');
       await setDoc(expensesRef, { list: updatedExpenses }, { merge: true });
     }
   };
@@ -763,6 +760,146 @@ const TravelApp = () => {
       </div>
     );
   };
+
+  // --- Budget View ---
+  const BudgetView = () => {
+    const totalYen = expenses.reduce((acc, cur) => acc + cur.amount, 0);
+    const totalTwd = Math.round(totalYen * exchangeRate);
+    const payerStats = payers.reduce((acc, payer) => {
+      acc[payer] = expenses.filter(e => e.payer === payer).reduce((sum, e) => sum + e.amount, 0);
+      return acc;
+    }, {});
+
+    return (
+      <div className="px-4 pb-20 pt-4 animate-fade-in select-none">
+        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 shadow-xl mb-6 text-center relative overflow-hidden border border-white/10">
+          <button onClick={exportToCSV} className="absolute top-4 right-4 bg-white/20 p-2 rounded-lg hover:bg-white/30 active:scale-95 transition-all text-white flex items-center gap-1 text-xs">
+             <FileText size={14}/> 匯出
+          </button>
+          <div className="text-gray-200 text-sm mb-1 mt-2">總支出 Total</div>
+          <div className="text-4xl font-bold mb-2 font-mono">¥ {totalYen.toLocaleString()}</div>
+          <div className="text-xl text-purple-200 font-medium">≈ NT$ {totalTwd.toLocaleString()}</div>
+          
+          <div className="mt-6 grid grid-cols-2 gap-3">
+             {payers.map(payer => (
+               <div key={payer} className="bg-white/10 px-3 py-2 rounded-xl backdrop-blur-sm border border-white/5 text-left">
+                 <div className="text-xs text-gray-300 mb-1">{payer} 代付</div>
+                 <div className="font-bold text-sm">¥{payerStats[payer].toLocaleString()}</div>
+               </div>
+             ))}
+          </div>
+        </div>
+
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 mb-4 border border-white/5">
+          <div className="text-lg font-bold mb-4 flex items-center"><Plus size={18} className="mr-2"/> 新增消費</div>
+          <div className="space-y-3">
+            <div className="flex gap-3">
+                <input 
+                    type="date" 
+                    value={newExpenseDate}
+                    onChange={(e) => setNewExpenseDate(e.target.value)}
+                    className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-400"
+                />
+            </div>
+            <input type="text" placeholder="項目 (例: 淺草炸肉餅)" value={newExpenseName} onChange={(e) => setNewExpenseName(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"/>
+            <div className="flex gap-3">
+               <div className="relative flex-[2]">
+                 <span className="absolute left-4 top-3 text-gray-400 font-bold">¥</span>
+                 <input type="number" placeholder="0" value={newExpenseAmount} onChange={(e) => setNewExpenseAmount(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"/>
+               </div>
+               <div className="flex-1">
+                 <select value={newExpensePayer} onChange={(e) => setNewExpensePayer(e.target.value)} className="w-full h-full bg-black/20 border border-white/10 rounded-xl px-1 text-white focus:outline-none appearance-none text-center text-sm">
+                   {payers.map(p => <option key={p} value={p} className="text-black">{p}</option>)}
+                 </select>
+               </div>
+            </div>
+            <button onClick={handleAddExpense} className="w-full bg-purple-500 hover:bg-purple-400 text-white rounded-xl py-3 font-bold flex items-center justify-center transition-colors shadow-lg shadow-purple-500/30">新增紀錄</button>
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          {expenses.slice().sort((a, b) => new Date(b.date) - new Date(a.date) || new Date(b.timestamp) - new Date(a.timestamp)).map((item, idx) => (
+              <div key={idx} className="bg-white/5 p-4 rounded-xl flex justify-between items-center border border-white/5">
+                 <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-white/5 text-xs text-gray-400 border border-white/5">
+                        <span className="font-bold text-white">{item.date ? item.date.split('-')[2] : '--'}</span>
+                        <span className="text-[10px]">{item.date ? item.date.split('-')[1] + '月' : ''}</span>
+                    </div>
+                    <div className="font-medium">
+                        {item.name}
+                        <div className="text-xs text-gray-400 mt-0.5">{item.payer} 代付</div>
+                    </div>
+                 </div>
+                 <div className="flex items-center gap-3">
+                    <div className="font-bold font-mono text-lg">¥ {item.amount.toLocaleString()}</div>
+                    <button 
+                        onClick={() => handleDeleteExpense(item.timestamp)}
+                        className="text-gray-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                        <Trash2 size={16}/>
+                    </button>
+                 </div>
+              </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // --- Checklist View ---
+  const ChecklistView = () => (
+      <div className="px-4 pb-20 pt-4 animate-fade-in select-none">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6 border border-white/10 shadow-lg">
+              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-white">
+                  <Check size={24} className="text-green-400"/> 行李清單
+              </h2>
+              
+              <div className="flex gap-2 mb-6">
+                  <input 
+                      type="text" 
+                      placeholder="輸入想帶的物品..." 
+                      value={newItemText}
+                      onChange={(e) => setNewItemText(e.target.value)}
+                      className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-colors shadow-inner"
+                  />
+                  <button 
+                      onClick={handleAddChecklistItem}
+                      className="bg-purple-500 hover:bg-purple-600 text-white rounded-xl px-4 flex items-center justify-center transition-colors shadow-lg"
+                  >
+                      <Plus size={20}/>
+                  </button>
+              </div>
+
+              <div className="space-y-3">
+                  {checklist.map((item) => (
+                      <div 
+                          key={item.id} 
+                          className="group flex items-center justify-between bg-white/5 p-3 rounded-xl hover:bg-white/10 transition-all border border-white/5 shadow-sm"
+                      >
+                          <div 
+                              className="flex items-center flex-1 cursor-pointer"
+                              onClick={() => toggleChecklistItem(item.id)}
+                          >
+                              <div className={`w-6 h-6 rounded-md border-2 mr-3 flex items-center justify-center transition-all ${item.checked ? 'bg-green-500 border-green-500' : 'border-gray-500 bg-transparent'}`}>
+                                  {item.checked && <Check size={14} className="text-white" />}
+                              </div>
+                              <span className={`text-base transition-all ${item.checked ? 'text-gray-500 line-through decoration-2 decoration-gray-600' : 'text-white'}`}>{item.text}</span>
+                          </div>
+                          <button 
+                              onClick={() => deleteChecklistItem(item.id)}
+                              className="text-gray-600 hover:text-red-400 p-2 rounded-full hover:bg-white/5 transition-colors opacity-50 group-hover:opacity-100"
+                          >
+                              <Trash2 size={16}/>
+                          </button>
+                      </div>
+                  ))}
+                  {checklist.length === 0 && (
+                      <div className="text-center text-gray-500 py-8">清單是空的，加點東西吧！</div>
+                  )}
+              </div>
+          </div>
+      </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#0f0c29] text-white font-sans pb-20 select-none">
