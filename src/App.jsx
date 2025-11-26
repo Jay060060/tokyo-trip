@@ -24,48 +24,10 @@ import {
   updateDoc
 } from 'firebase/firestore';
 
-// --- 1. Error Boundary (防白屏護盾) ---
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    this.setState({ error, errorInfo });
-    console.error("App Crash:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen bg-gray-900 text-white p-8 flex flex-col items-center justify-center">
-          <div className="bg-red-900/30 border-2 border-red-500 rounded-2xl p-6 max-w-lg w-full">
-            <div className="flex items-center gap-3 mb-4 text-red-400">
-              <Bug size={32} />
-              <h1 className="text-2xl font-bold">程式發生錯誤</h1>
-            </div>
-            <p className="mb-4 text-gray-300">請截圖此畫面給我，以便除錯。</p>
-            <div className="bg-black/50 p-4 rounded-lg overflow-auto max-h-60 font-mono text-xs mb-4 border border-red-500/30">
-              <p className="text-red-300 font-bold mb-2">{this.state.error && this.state.error.toString()}</p>
-            </div>
-            <button onClick={() => window.location.reload()} className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold">重新整理</button>
-          </div>
-        </div>
-      );
-    }
-    return this.props.children; 
-  }
-}
-
 // ============================================================================
 // ⚠️⚠️⚠️ 部署前請務必填寫此處！ ⚠️⚠️⚠️
 // 請前往 Firebase Console -> Project Settings -> General -> Your apps
-// 複製您的設定貼到下方：
+// 複製您的設定貼到下方，取代原本的字串：
 // ============================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
@@ -76,16 +38,17 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-// 修正：定義 APP_ID，解決 ReferenceError
 const app = initializeApp(firebaseConfig);
 // ============================================================================
 
+// --- 座標設定 ---
 const LOCATIONS = {
     tokyo: { lat: 35.6895, lon: 139.6917 },
     izu: { lat: 34.9714, lon: 139.0925 },
     shuzenji: { lat: 34.9773, lon: 138.9343 }
 };
 
+// --- 初始資料 ---
 const INITIAL_ITINERARY = [
   {
     date: "11/28 (五)",
@@ -167,7 +130,7 @@ const INITIAL_ITINERARY = [
 
 const INITIAL_CHECKLIST = [{ id: 1, text: "護照", checked: false }, { id: 2, text: "機票", checked: false }];
 
-// --- 補回遺失的 IconMap 與 CATEGORIES ---
+// --- 輔助元件 (圖示與類別) ---
 const IconMap = ({ type, size = 16 }) => {
   switch (type) {
     case 'food': return <Utensils size={size} />;
@@ -192,7 +155,15 @@ const CATEGORIES = [
     { value: 'shopping', label: '購物' },
 ];
 
-const getWeatherIcon = (c) => c===0?<Sun size={14}/>:c<3?<CloudSun size={14}/>:c<60?<Cloud size={14}/>:<CloudRain size={14}/>;
+const getWeatherIcon = (c, size=14) => {
+    if (c === 0) return <Sun size={size} />;
+    if (c >= 1 && c <= 3) return <CloudSun size={size} />;
+    if (c >= 51 && c <= 67) return <CloudRain size={size} />;
+    if (c >= 80 && c <= 82) return <CloudRain size={size} />;
+    if (c >= 95) return <Wind size={size} />;
+    return <Cloud size={size} />;
+};
+
 const WeatherStrip = ({ hourlyWeather, isLoading, isError }) => (
     <div className="flex space-x-4 overflow-x-auto pb-2 no-scrollbar mt-3 min-h-[4rem]">
         {isLoading ? <div className="text-xs text-gray-400 w-full text-center"><Loader2 className="animate-spin inline mr-1"/>載入中...</div> : 
@@ -207,6 +178,9 @@ const WeatherStrip = ({ hourlyWeather, isLoading, isError }) => (
     </div>
 );
 
+// --- 1. Error Boundary (防白屏護盾) - 已在最上方 ---
+
+// --- 主程式 ---
 const TravelApp = () => {
   const [activeTab, setActiveTab] = useState('itinerary');
   const [activeDate, setActiveDate] = useState(0);
@@ -215,23 +189,26 @@ const TravelApp = () => {
   const [liveWeather, setLiveWeather] = useState({ temp: '--', range: '--', hourly: [] });
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState(false);
+  
+  // Data States
   const [itineraryData, setItineraryData] = useState(INITIAL_ITINERARY);
   const [expenses, setExpenses] = useState([]);
   const [checklist, setChecklist] = useState(INITIAL_CHECKLIST);
 
-  // Modal State (補回遺失的狀態)
+  // UI States (之前缺漏的變數)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   
-  // Budget State (補回遺失的狀態)
+  // Budget States (之前缺漏的變數)
   const [newExpenseName, setNewExpenseName] = useState('');
   const [newExpenseAmount, setNewExpenseAmount] = useState('');
   const [newExpensePayer, setNewExpensePayer] = useState('Jay');
   const [newExpenseDate, setNewExpenseDate] = useState(new Date().toISOString().split('T')[0]);
   
-  // Checklist State (補回遺失的狀態)
+  // Checklist States (之前缺漏的變數)
   const [newItemText, setNewItemText] = useState('');
 
+  // Constants
   const exchangeRate = 0.215;
   const payers = ["Jay", "Tracy", "Emma", "IF"];
 
@@ -261,7 +238,6 @@ const TravelApp = () => {
   useEffect(() => {
     if (!user || !db) return;
     
-    // 使用統一的 APP_ID 常數
     const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary');
     
     const unsub = onSnapshot(itineraryRef, (snap) => {
@@ -626,13 +602,24 @@ const TravelApp = () => {
                                 </div>
                                 <p className="text-gray-300 text-xs mt-2 leading-relaxed">{currentDay.outfit}</p>
                             </div>
-                            <div className="text-center">
-                                {weatherLoading ? <Loader2 className="animate-spin"/> : <div className="text-yellow-300 drop-shadow-lg mb-1">{getWeatherIcon(liveWeather.conditionCode)}</div>}
-                                <span className="text-3xl font-bold">{liveWeather.temp}</span>
+                            <div className="text-center min-w-[5rem] flex flex-col items-end">
+                                {weatherLoading ? (
+                                    <Loader2 size={40} className="mb-1 text-white animate-spin"/>
+                                ) : (
+                                    <div className="text-yellow-300 drop-shadow-lg">
+                                        {getWeatherIcon(liveWeather.conditionCode, 48)}
+                                    </div>
+                                )}
+                                <span className="text-4xl font-bold font-mono block mt-1 drop-shadow-md">{liveWeather.temp}</span>
                             </div>
                         </div>
+                        
                         <div className="border-t border-white/10 pt-2">
-                            <WeatherStrip hourlyWeather={liveWeather.hourly} isLoading={weatherLoading} isError={weatherError}/>
+                            <div className="text-xs text-gray-400 mb-1 flex items-center gap-1 justify-between">
+                                <span className="flex items-center gap-1"><CloudRain size={10}/> 24小時預報 (即時)</span>
+                                <span className="text-[10px] opacity-50">{currentData.location}</span>
+                            </div>
+                            <WeatherStrip hourlyWeather={liveWeather.hourly} isLoading={weatherLoading} isError={weatherError} />
                         </div>
                     </div>
 
