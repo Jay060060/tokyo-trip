@@ -76,7 +76,7 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-// 統一使用全域常數 APP_ID
+// 修正：定義 APP_ID，解決 ReferenceError
 const app = initializeApp(firebaseConfig);
 // ============================================================================
 
@@ -167,6 +167,31 @@ const INITIAL_ITINERARY = [
 
 const INITIAL_CHECKLIST = [{ id: 1, text: "護照", checked: false }, { id: 2, text: "機票", checked: false }];
 
+// --- 補回遺失的 IconMap 與 CATEGORIES ---
+const IconMap = ({ type, size = 16 }) => {
+  switch (type) {
+    case 'food': return <Utensils size={size} />;
+    case 'transport': return <Train size={size} />;
+    case 'car': return <Car size={size} />;
+    case 'hotel': return <Hotel size={size} />;
+    case 'camera': return <Camera size={size} />;
+    case 'shopping': return <ShoppingBag size={size} />;
+    case 'mountain': return <Mountain size={size} />;
+    case 'icecream': return <IceCream size={size} />;
+    case 'map': return <MapPin size={size} />;
+    case 'flight': return <Plane size={size} />;
+    default: return <MapPin size={size} />;
+  }
+};
+
+const CATEGORIES = [
+    { value: 'food', label: '午餐/晚餐' },
+    { value: 'activity', label: '景點/活動' },
+    { value: 'transport', label: '交通/移動' },
+    { value: 'hotel', label: '住宿/飯店' },
+    { value: 'shopping', label: '購物' },
+];
+
 const getWeatherIcon = (c) => c===0?<Sun size={14}/>:c<3?<CloudSun size={14}/>:c<60?<Cloud size={14}/>:<CloudRain size={14}/>;
 const WeatherStrip = ({ hourlyWeather, isLoading, isError }) => (
     <div className="flex space-x-4 overflow-x-auto pb-2 no-scrollbar mt-3 min-h-[4rem]">
@@ -193,18 +218,6 @@ const TravelApp = () => {
   const [itineraryData, setItineraryData] = useState(INITIAL_ITINERARY);
   const [expenses, setExpenses] = useState([]);
   const [checklist, setChecklist] = useState(INITIAL_CHECKLIST);
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState(null);
-  
-  const [newExpenseName, setNewExpenseName] = useState('');
-  const [newExpenseAmount, setNewExpenseAmount] = useState('');
-  const [newExpensePayer, setNewExpensePayer] = useState('Jay');
-  const [newExpenseDate, setNewExpenseDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newItemText, setNewItemText] = useState('');
-
-  const exchangeRate = 0.215;
-  const payers = ["Jay", "Tracy", "Emma", "IF"];
 
   // Firebase Init
   const [db, setDb] = useState(null);
@@ -238,7 +251,7 @@ const TravelApp = () => {
     const unsub = onSnapshot(itineraryRef, (snap) => {
         setIsSyncing(false);
         if (snap.exists() && snap.data().data) setItineraryData(snap.data().data);
-        else setDoc(itineraryRef, { data: INITIAL_ITINERARY });
+        else setDoc(doc(db, 'trips', APP_ID, 'data', 'itinerary'), { data: INITIAL_ITINERARY });
     });
     return () => unsub();
   }, [user, db]);
@@ -689,7 +702,7 @@ const TravelApp = () => {
                             </div>
                             <input type="text" placeholder="項目 (例: 淺草炸肉餅)" value={newExpenseName} onChange={(e) => setNewExpenseName(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"/>
                             <div className="flex gap-3">
-                                <input type="number" placeholder="0" value={newExpenseAmount} onChange={(e) => setNewExpenseAmount(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"/>
+                                <input type="number" placeholder="0" value={newExpenseAmount} onChange={(e) => setNewExpenseAmount(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"/>
                                 <div className="flex-1">
                                     <select value={newExpensePayer} onChange={(e) => setNewExpensePayer(e.target.value)} className="w-full h-full bg-black/20 border border-white/10 rounded-xl px-1 text-white focus:outline-none appearance-none text-center text-sm">
                                         {payers.map(p => <option key={p} value={p} className="text-black">{p}</option>)}
