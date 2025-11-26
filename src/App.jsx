@@ -24,6 +24,25 @@ import {
   updateDoc
 } from 'firebase/firestore';
 
+// ============================================================================
+// ⚠️⚠️⚠️ 部署前請務必填寫此處！ ⚠️⚠️⚠️
+// ============================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
+  authDomain: "tokyo-izu.firebaseapp.com",
+  projectId: "tokyo-izu",
+  storageBucket: "tokyo-izu.firebasestorage.app",
+  messagingSenderId: "291700650556",
+  appId: "1:291700650556:web:82303d66deaa02e93d4939"
+};
+
+// 自動判斷環境 (預覽用內建，部署用手動)
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : manualConfig;
+
+// ✅ 強制使用純文字 ID，確保全域可讀取
+const app = initializeApp(firebaseConfig);
+// ============================================================================
+
 // --- 1. Error Boundary (防白屏護盾) ---
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -43,17 +62,13 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gray-900 text-white p-8 flex flex-col items-center justify-center">
-          <div className="bg-red-900/30 border-2 border-red-500 rounded-2xl p-6 max-w-lg w-full">
-            <div className="flex items-center gap-3 mb-4 text-red-400">
-              <Bug size={32} />
-              <h1 className="text-2xl font-bold">程式發生錯誤</h1>
+        <div style={{ minHeight: '100vh', backgroundColor: '#111827', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ backgroundColor: 'rgba(127, 29, 29, 0.2)', border: '2px solid #ef4444', borderRadius: '16px', padding: '24px', maxWidth: '500px', width: '100%' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', color: '#f87171' }}>程式發生錯誤</h1>
+            <div style={{ backgroundColor: 'rgba(0,0,0,0.5)', padding: '16px', borderRadius: '8px', overflow: 'auto', maxHeight: '240px', marginBottom: '16px', fontFamily: 'monospace', fontSize: '12px' }}>
+              <p style={{ color: '#fca5a5', margin: 0 }}>{this.state.error && this.state.error.toString()}</p>
             </div>
-            <p className="mb-4 text-gray-300">請截圖此畫面給我，以便除錯。</p>
-            <div className="bg-black/50 p-4 rounded-lg overflow-auto max-h-60 font-mono text-xs mb-4 border border-red-500/30">
-              <p className="text-red-300 font-bold mb-2">{this.state.error && this.state.error.toString()}</p>
-            </div>
-            <button onClick={() => window.location.reload()} className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold">重新整理</button>
+            <button onClick={() => window.location.reload()} style={{ width: '100%', backgroundColor: '#dc2626', color: 'white', padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>重新整理</button>
           </div>
         </div>
       );
@@ -61,21 +76,6 @@ class ErrorBoundary extends React.Component {
     return this.props.children; 
   }
 }
-
-// ============================================================================
-// ⚠️⚠️⚠️ 部署前請務必填寫此處！ ⚠️⚠️⚠️
-// ============================================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
-  authDomain: "tokyo-izu.firebaseapp.com",
-  projectId: "tokyo-izu",
-  storageBucket: "tokyo-izu.firebasestorage.app",
-  messagingSenderId: "291700650556",
-  appId: "1:291700650556:web:82303d66deaa02e93d4939"
-};
-
-const app = initializeApp(firebaseConfig);
-// ============================================================================
 
 // --- 資料與常數 ---
 const LOCATIONS = {
@@ -165,7 +165,7 @@ const INITIAL_ITINERARY = [
 
 const INITIAL_CHECKLIST = [{ id: 1, text: "護照", checked: false }, { id: 2, text: "機票", checked: false }];
 
-// --- 輔助元件 (圖示與類別) ---
+// --- 輔助元件 ---
 const IconMap = ({ type, size = 16 }) => {
   switch (type) {
     case 'food': return <Utensils size={size} />;
@@ -268,16 +268,14 @@ const TravelApp = () => {
   }, []);
 
   // Sync Logic
-  // Path uses 'trips/APP_ID/data/DOC' - 4 segments. Correct.
   useEffect(() => {
     if (!user || !db) return;
-    
-    const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary_v16_reset');
-    
+    // 更新資料庫路徑到 v18_final，確保讀取完整 5 天行程
+    const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary_v18_final');
     const unsub = onSnapshot(itineraryRef, (snap) => {
         setIsSyncing(false);
         if (snap.exists() && snap.data().data) setItineraryData(snap.data().data);
-        else setDoc(doc(db, 'trips', APP_ID, 'data', 'itinerary_v16_reset'), { data: INITIAL_ITINERARY });
+        else setDoc(doc(db, 'trips', APP_ID, 'data', 'itinerary_v18_final'), { data: INITIAL_ITINERARY });
     });
     return () => unsub();
   }, [user, db]);
@@ -285,7 +283,7 @@ const TravelApp = () => {
   // Sync Expenses
   useEffect(() => {
     if (!user || !db) return;
-    const expensesRef = doc(db, 'trips', APP_ID, 'data', 'expenses_v16_reset');
+    const expensesRef = doc(db, 'trips', APP_ID, 'data', 'expenses_v18_final');
     const unsub = onSnapshot(expensesRef, (snap) => {
       if (snap.exists()) setExpenses(snap.data().list || []);
     });
@@ -295,7 +293,7 @@ const TravelApp = () => {
   // Sync Checklist
   useEffect(() => {
     if (!user || !db) return;
-    const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist_v16_reset');
+    const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist_v18_final');
     const unsub = onSnapshot(checklistRef, (snap) => {
       if (snap.exists()) setChecklist(snap.data().list || INITIAL_CHECKLIST);
       else setDoc(checklistRef, { list: INITIAL_CHECKLIST });
@@ -346,7 +344,7 @@ const TravelApp = () => {
           dayEvents[eventIndex] = editingEvent; 
           setItineraryData(newItinerary); 
           if (db) {
-            const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary_v16_reset');
+            const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary_v18_final');
             await updateDoc(itineraryRef, { data: newItinerary });
           }
         }
@@ -363,7 +361,7 @@ const TravelApp = () => {
           newItinerary[editingEvent.dateIndex].events = updatedEvents;
           setItineraryData(newItinerary);
           if (db) {
-            const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary_v16_reset');
+            const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary_v18_final');
             await updateDoc(itineraryRef, { data: newItinerary });
           }
       }
@@ -392,7 +390,7 @@ const TravelApp = () => {
       setChecklist(updatedList);
       setNewItemText('');
       if (db) {
-        const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist_v16_reset');
+        const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist_v18_final');
         await setDoc(checklistRef, { list: updatedList }, { merge: true });
       }
   };
@@ -403,7 +401,7 @@ const TravelApp = () => {
       );
       setChecklist(updatedList);
       if (db) {
-        const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist_v16_reset');
+        const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist_v18_final');
         await setDoc(checklistRef, { list: updatedList }, { merge: true });
       }
   };
@@ -413,7 +411,7 @@ const TravelApp = () => {
       const updatedList = checklist.filter(item => item.id !== id);
       setChecklist(updatedList);
       if (db) {
-        const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist_v16_reset');
+        const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist_v18_final');
         await setDoc(checklistRef, { list: updatedList }, { merge: true });
       }
   };
@@ -430,7 +428,7 @@ const TravelApp = () => {
       const updatedExpenses = [...expenses, newExpense];
       setExpenses(updatedExpenses);
       if (db) {
-        const expensesRef = doc(db, 'trips', APP_ID, 'data', 'expenses_v16_reset');
+        const expensesRef = doc(db, 'trips', APP_ID, 'data', 'expenses_v18_final');
         await setDoc(expensesRef, { list: updatedExpenses }, { merge: true });
       }
       setNewExpenseName('');
@@ -443,7 +441,7 @@ const TravelApp = () => {
     const updatedExpenses = expenses.filter(e => e.timestamp !== timestamp);
     setExpenses(updatedExpenses);
     if (db) {
-      const expensesRef = doc(db, 'trips', APP_ID, 'data', 'expenses_v16_reset');
+      const expensesRef = doc(db, 'trips', APP_ID, 'data', 'expenses_v18_final');
       await setDoc(expensesRef, { list: updatedExpenses }, { merge: true });
     }
   };
@@ -483,6 +481,293 @@ const TravelApp = () => {
   }
 
   const currentDay = itineraryData[activeDate] || INITIAL_ITINERARY[activeDate];
+
+  // --- Itinerary View ---
+  const ItineraryView = () => {
+    const events = Array.isArray(currentDay.events) ? currentDay.events : [];
+
+    return (
+      <div className="px-4 pb-28 pt-2">
+        {/* Header Section with LIVE Weather */}
+        <div className="bg-gradient-to-br from-purple-900/80 to-indigo-900/80 backdrop-blur-md rounded-3xl p-6 mb-8 border border-white/10 shadow-xl relative overflow-hidden select-none">
+          
+          {/* Live Tag */}
+          <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-2 py-1 rounded-bl-xl font-bold flex items-center gap-1 shadow-lg z-10">
+             <RefreshCw size={10} className={weatherLoading ? "animate-spin" : ""}/> 
+             LIVE 預報
+          </div>
+
+          <div className="flex justify-between items-start mb-4 relative z-0">
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-1">{currentDay.date}</h2>
+                <div className="flex items-center gap-2 text-purple-200 text-sm bg-white/10 px-3 py-1 rounded-full w-fit">
+                    <Shirt size={14}/>
+                    <span>今日穿搭建議</span>
+                </div>
+                <p className="text-gray-300 text-sm mt-2 leading-relaxed max-w-[85%]">
+                    {currentDay.outfit || "請根據當日天氣調整穿著。"}
+                </p>
+              </div>
+              <div className="text-center min-w-[5rem] flex flex-col items-end">
+                 {weatherLoading ? (
+                     <Loader2 size={40} className="mb-1 text-white animate-spin"/>
+                 ) : (
+                     <div className="text-yellow-300 drop-shadow-lg">
+                        {getWeatherIcon(liveWeather.conditionCode, 48)}
+                     </div>
+                 )}
+                 <span className="text-4xl font-bold font-mono block mt-1 drop-shadow-md">{liveWeather.temp}</span>
+              </div>
+          </div>
+          
+          <div className="border-t border-white/10 pt-2">
+              <div className="text-xs text-gray-400 mb-1 flex items-center gap-1 justify-between">
+                  <span className="flex items-center gap-1"><CloudRain size={10}/> 24小時預報 (即時)</span>
+                  <span className="text-[10px] opacity-50">{currentDay.location}</span>
+              </div>
+              <WeatherStrip hourlyWeather={liveWeather.hourly} isLoading={weatherLoading} isError={weatherError} />
+          </div>
+        </div>
+
+        {/* Events List */}
+        <div className="space-y-8 relative pl-2">
+          <div className="absolute left-[3.8rem] top-6 bottom-6 w-0.5 bg-gradient-to-b from-indigo-500/20 via-purple-500/50 to-indigo-500/20 rounded-full"></div>
+
+          {events.map((event, idx) => (
+            <div key={idx} className="relative z-10 cursor-pointer select-none" onClick={() => handleEventClick(event, activeDate)}>
+              {(event.type === 'flight' || event.flightNo === 'Saphir') ? (
+                 <div className={`w-full ${event.bg || 'bg-blue-600'} bg-opacity-90 rounded-3xl p-5 shadow-xl text-white mb-8 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 border border-white/10`}>
+                    <div className="absolute -right-6 -top-6 text-white/10 transform rotate-12">
+                      {event.flightNo === 'Saphir' ? <Train size={140} /> : <Plane size={140} />}
+                    </div>
+                    <div className="flex justify-between items-center mb-6 relative z-10">
+                      <div>
+                        <div className="text-3xl font-bold font-mono tracking-tighter">{event.time}</div>
+                        <div className="text-blue-100 font-medium text-xs mt-1">{event.title}</div>
+                      </div>
+                      <div className="flex flex-col items-center px-2 w-1/3">
+                         <span className="text-xs text-white/80 mb-2">{event.duration}</span>
+                         <div className="w-full h-0.5 bg-white/30 relative flex items-center justify-center">
+                           {event.flightNo === 'Saphir' ? 
+                             <Train size={14} className="text-white fill-current absolute bg-teal-700 px-1"/> : 
+                             <Plane size={14} className="text-white fill-current rotate-90 absolute bg-blue-600 px-1"/>
+                           }
+                         </div>
+                         <span className="text-[10px] font-bold mt-2 bg-white/20 px-2 py-0.5 rounded backdrop-blur-sm border border-white/10 whitespace-nowrap">{event.flightNo}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-3xl font-bold font-mono tracking-tighter">{event.endTime}</div>
+                        <div className="text-blue-100 font-medium text-xs mt-1">{event.dest}</div>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center bg-black/20 rounded-xl p-3 backdrop-blur-md border border-white/5">
+                      <div className="flex items-center gap-2">
+                         <MapPin size={14} className="text-white/80"/>
+                         <span className="text-sm font-medium">{event.terminal}</span>
+                      </div>
+                      <Edit3 size={14} className="text-white/50"/>
+                    </div>
+                    {event.notes && (
+                        <div className="mt-3 text-xs text-white/70 bg-black/10 p-2 rounded flex items-start">
+                            <FileText size={12} className="mr-1 mt-0.5 flex-shrink-0"/> {event.notes}
+                        </div>
+                    )}
+                 </div>
+              ) : (
+                <div className="flex items-start group">
+                  <div className="flex flex-col items-center mr-4 pt-1 w-14 flex-shrink-0">
+                    <span className="text-lg font-bold font-mono tracking-tight opacity-90">{event.time}</span>
+                    <div className={`mt-3 w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 border-2 border-[#1e1b4b] ${
+                      event.category === 'food' ? 'bg-orange-400 text-white' :
+                      event.category === 'transport' ? 'bg-blue-500 text-white' :
+                      event.category === 'hotel' ? 'bg-purple-500 text-white' :
+                      event.category === 'shopping' ? 'bg-pink-500 text-white' :
+                      'bg-rose-500 text-white'
+                    }`}>
+                      <IconMap type={event.iconType || event.type} />
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1 bg-white/10 hover:bg-white/15 backdrop-blur-md text-white rounded-2xl p-4 shadow-lg active:scale-[0.98] transition-all border border-white/5 relative overflow-hidden">
+                     <h3 className="text-lg font-bold mb-1 flex items-center text-white leading-tight justify-between">
+                        {event.title}
+                        <Edit3 size={14} className="text-white/30" />
+                     </h3>
+                     <div className="text-gray-300 text-sm flex items-start leading-relaxed mb-2">
+                        {event.sub}
+                     </div>
+                     
+                     {event.image && (
+                         <div className="mb-3 w-full h-32 rounded-lg overflow-hidden border border-white/10 relative">
+                             <div className="absolute inset-0 bg-black/20"></div>
+                             <img src={event.image} alt="Note" className="w-full h-full object-cover" />
+                         </div>
+                     )}
+
+                     {(event.notes || event.mapLink) && (
+                       <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
+                          {event.notes && (
+                            <div className="text-xs text-gray-300 flex items-start bg-white/5 p-2 rounded">
+                               <FileText size={12} className="mr-2 mt-0.5 flex-shrink-0 text-purple-300"/> 
+                               <span className="leading-relaxed">{event.notes}</span>
+                            </div>
+                          )}
+                          {event.mapLink && (
+                            <a href={event.mapLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center w-fit text-xs text-blue-200 hover:text-white bg-blue-500/30 px-2 py-1 rounded transition-colors">
+                               <MapPin size={10} className="mr-1"/> 查看地圖
+                            </a>
+                          )}
+                       </div>
+                     )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // --- Budget View ---
+  const BudgetView = () => {
+    const totalYen = expenses.reduce((acc, cur) => acc + cur.amount, 0);
+    const totalTwd = Math.round(totalYen * exchangeRate);
+    const payerStats = payers.reduce((acc, payer) => {
+      acc[payer] = expenses.filter(e => e.payer === payer).reduce((sum, e) => sum + e.amount, 0);
+      return acc;
+    }, {});
+
+    return (
+      <div className="px-4 pb-20 pt-4 animate-fade-in select-none">
+        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 shadow-xl mb-6 text-center relative overflow-hidden border border-white/10">
+          <button onClick={exportToCSV} className="absolute top-4 right-4 bg-white/20 p-2 rounded-lg hover:bg-white/30 active:scale-95 transition-all text-white flex items-center gap-1 text-xs">
+             <FileText size={14}/> 匯出
+          </button>
+          <div className="text-gray-200 text-sm mb-1 mt-2">總支出 Total</div>
+          <div className="text-4xl font-bold mb-2 font-mono">¥ {totalYen.toLocaleString()}</div>
+          <div className="text-xl text-purple-200 font-medium">≈ NT$ {totalTwd.toLocaleString()}</div>
+          
+          <div className="mt-6 grid grid-cols-2 gap-3">
+             {payers.map(payer => (
+               <div key={payer} className="bg-white/10 px-3 py-2 rounded-xl backdrop-blur-sm border border-white/5 text-left">
+                 <div className="text-xs text-gray-300 mb-1">{payer} 代付</div>
+                 <div className="font-bold text-sm">¥{payerStats[payer].toLocaleString()}</div>
+               </div>
+             ))}
+          </div>
+        </div>
+
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 mb-4 border border-white/5">
+          <div className="text-lg font-bold mb-4 flex items-center"><Plus size={18} className="mr-2"/> 新增消費</div>
+          <div className="space-y-3">
+            <div className="flex gap-3">
+                <input 
+                    type="date" 
+                    value={newExpenseDate}
+                    onChange={(e) => setNewExpenseDate(e.target.value)}
+                    className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-400"
+                />
+            </div>
+            <input type="text" placeholder="項目 (例: 淺草炸肉餅)" value={newExpenseName} onChange={(e) => setNewExpenseName(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"/>
+            <div className="flex gap-3">
+               <div className="relative flex-[2]">
+                 <span className="absolute left-4 top-3 text-gray-400 font-bold">¥</span>
+                 <input type="number" placeholder="0" value={newExpenseAmount} onChange={(e) => setNewExpenseAmount(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"/>
+               </div>
+               <div className="flex-1">
+                 <select value={newExpensePayer} onChange={(e) => setNewExpensePayer(e.target.value)} className="w-full h-full bg-black/20 border border-white/10 rounded-xl px-1 text-white focus:outline-none appearance-none text-center text-sm">
+                   {payers.map(p => <option key={p} value={p} className="text-black">{p}</option>)}
+                 </select>
+               </div>
+            </div>
+            <button onClick={handleAddExpense} className="w-full bg-purple-500 hover:bg-purple-400 text-white rounded-xl py-3 font-bold flex items-center justify-center transition-colors shadow-lg shadow-purple-500/30">新增紀錄</button>
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          {expenses.slice().sort((a, b) => new Date(b.date) - new Date(a.date) || new Date(b.timestamp) - new Date(a.timestamp)).map((item, idx) => (
+              <div key={idx} className="bg-white/5 p-4 rounded-xl flex justify-between items-center border border-white/5">
+                 <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-white/5 text-xs text-gray-400 border border-white/5">
+                        <span className="font-bold text-white">{item.date ? item.date.split('-')[2] : '--'}</span>
+                        <span className="text-[10px]">{item.date ? item.date.split('-')[1] + '月' : ''}</span>
+                    </div>
+                    <div className="font-medium">
+                        {item.name}
+                        <div className="text-xs text-gray-400 mt-0.5">{item.payer} 代付</div>
+                    </div>
+                 </div>
+                 <div className="flex items-center gap-3">
+                    <div className="font-bold font-mono text-lg">¥ {item.amount.toLocaleString()}</div>
+                    <button 
+                        onClick={() => handleDeleteExpense(item.timestamp)}
+                        className="text-gray-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                        <Trash2 size={16}/>
+                    </button>
+                 </div>
+              </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // --- Checklist View ---
+  const ChecklistView = () => (
+      <div className="px-4 pb-20 pt-4 animate-fade-in select-none">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6 border border-white/10 shadow-lg">
+              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-white">
+                  <Check size={24} className="text-green-400"/> 行李清單
+              </h2>
+              
+              <div className="flex gap-2 mb-6">
+                  <input 
+                      type="text" 
+                      placeholder="輸入想帶的物品..." 
+                      value={newItemText}
+                      onChange={(e) => setNewItemText(e.target.value)}
+                      className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-colors shadow-inner"
+                  />
+                  <button 
+                      onClick={handleAddChecklistItem}
+                      className="bg-purple-500 hover:bg-purple-600 text-white rounded-xl px-4 flex items-center justify-center transition-colors shadow-lg"
+                  >
+                      <Plus size={20}/>
+                  </button>
+              </div>
+
+              <div className="space-y-3">
+                  {checklist.map((item) => (
+                      <div 
+                          key={item.id} 
+                          className="group flex items-center justify-between bg-white/5 p-3 rounded-xl hover:bg-white/10 transition-all border border-white/5 shadow-sm"
+                      >
+                          <div 
+                              className="flex items-center flex-1 cursor-pointer"
+                              onClick={() => toggleChecklistItem(item.id)}
+                          >
+                              <div className={`w-6 h-6 rounded-md border-2 mr-3 flex items-center justify-center transition-all ${item.checked ? 'bg-green-500 border-green-500' : 'border-gray-500 bg-transparent'}`}>
+                                  {item.checked && <Check size={14} className="text-white" />}
+                              </div>
+                              <span className={`text-base transition-all ${item.checked ? 'text-gray-500 line-through decoration-2 decoration-gray-600' : 'text-white'}`}>{item.text}</span>
+                          </div>
+                          <button 
+                              onClick={() => deleteChecklistItem(item.id)}
+                              className="text-gray-600 hover:text-red-400 p-2 rounded-full hover:bg-white/5 transition-colors opacity-50 group-hover:opacity-100"
+                          >
+                              <Trash2 size={16}/>
+                          </button>
+                      </div>
+                  ))}
+                  {checklist.length === 0 && (
+                      <div className="text-center text-gray-500 py-8">清單是空的，加點東西吧！</div>
+                  )}
+              </div>
+          </div>
+      </div>
+  );
 
   const EditModal = () => {
     if (!isModalOpen || !editingEvent) return null;
@@ -614,294 +899,6 @@ const TravelApp = () => {
           >
             保存變更
           </button>
-        </div>
-      </div>
-    );
-  };
-
-  // ChecklistView
-  const ChecklistView = () => (
-      <div className="px-4 pb-20 pt-4 animate-fade-in select-none">
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6 border border-white/10 shadow-lg">
-              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-white">
-                  <Check size={24} className="text-green-400"/> 行李清單
-              </h2>
-              
-              <div className="flex gap-2 mb-6">
-                  <input 
-                      type="text" 
-                      placeholder="輸入想帶的物品..." 
-                      value={newItemText}
-                      onChange={(e) => setNewItemText(e.target.value)}
-                      className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-colors shadow-inner"
-                  />
-                  <button 
-                      onClick={handleAddChecklistItem}
-                      className="bg-purple-500 hover:bg-purple-600 text-white rounded-xl px-4 flex items-center justify-center transition-colors shadow-lg"
-                  >
-                      <Plus size={20}/>
-                  </button>
-              </div>
-
-              <div className="space-y-3">
-                  {checklist.map((item) => (
-                      <div 
-                          key={item.id} 
-                          className="group flex items-center justify-between bg-white/5 p-3 rounded-xl hover:bg-white/10 transition-all border border-white/5 shadow-sm"
-                      >
-                          <div 
-                              className="flex items-center flex-1 cursor-pointer"
-                              onClick={() => toggleChecklistItem(item.id)}
-                          >
-                              <div className={`w-6 h-6 rounded-md border-2 mr-3 flex items-center justify-center transition-all ${item.checked ? 'bg-green-500 border-green-500' : 'border-gray-500 bg-transparent'}`}>
-                                  {item.checked && <Check size={14} className="text-white" />}
-                              </div>
-                              <span className={`text-base transition-all ${item.checked ? 'text-gray-500 line-through decoration-2 decoration-gray-600' : 'text-white'}`}>{item.text}</span>
-                          </div>
-                          <button 
-                              onClick={() => deleteChecklistItem(item.id)}
-                              className="text-gray-600 hover:text-red-400 p-2 rounded-full hover:bg-white/5 transition-colors opacity-50 group-hover:opacity-100"
-                          >
-                              <Trash2 size={16}/>
-                          </button>
-                      </div>
-                  ))}
-                  {checklist.length === 0 && (
-                      <div className="text-center text-gray-500 py-8">清單是空的，加點東西吧！</div>
-                  )}
-              </div>
-          </div>
-      </div>
-  );
-
-  // Itinerary View
-  const ItineraryView = () => {
-    const events = Array.isArray(currentDay.events) ? currentDay.events : [];
-
-    return (
-      <div className="px-4 pb-28 pt-2">
-        {/* Header Section with LIVE Weather */}
-        <div className="bg-gradient-to-br from-purple-900/80 to-indigo-900/80 backdrop-blur-md rounded-3xl p-6 mb-8 border border-white/10 shadow-xl relative overflow-hidden select-none">
-          
-          {/* Live Tag */}
-          <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-2 py-1 rounded-bl-xl font-bold flex items-center gap-1 shadow-lg z-10">
-             <RefreshCw size={10} className={weatherLoading ? "animate-spin" : ""}/> 
-             LIVE 預報
-          </div>
-
-          <div className="flex justify-between items-start mb-4 relative z-0">
-              <div>
-                <h2 className="text-3xl font-bold text-white mb-1">{currentDay.date}</h2>
-                <div className="flex items-center gap-2 text-purple-200 text-sm bg-white/10 px-3 py-1 rounded-full w-fit">
-                    <Shirt size={14}/>
-                    <span>今日穿搭建議</span>
-                </div>
-                <p className="text-gray-300 text-sm mt-2 leading-relaxed max-w-[85%]">
-                    {currentDay.outfit || "請根據當日天氣調整穿著。"}
-                </p>
-              </div>
-              {/* UPDATED WEATHER DISPLAY: No background, larger icon/text */}
-              <div className="text-center min-w-[5rem] flex flex-col items-end">
-                 {weatherLoading ? (
-                     <Loader2 size={40} className="mb-1 text-white animate-spin"/>
-                 ) : (
-                     <div className="text-yellow-300 drop-shadow-lg">
-                        {getWeatherIcon(liveWeather.conditionCode, 48)}
-                     </div>
-                 )}
-                 <span className="text-4xl font-bold font-mono block mt-1 drop-shadow-md">{liveWeather.temp}</span>
-              </div>
-          </div>
-          
-          {/* Weather Strip */}
-          <div className="border-t border-white/10 pt-2">
-              <div className="text-xs text-gray-400 mb-1 flex items-center gap-1 justify-between">
-                  <span className="flex items-center gap-1"><CloudRain size={10}/> 24小時預報 (即時)</span>
-                  <span className="text-[10px] opacity-50">{currentDay.location}</span>
-              </div>
-              <WeatherStrip hourlyWeather={liveWeather.hourly} isLoading={weatherLoading} isError={weatherError} />
-          </div>
-        </div>
-
-        {/* Events List */}
-        <div className="space-y-8 relative pl-2">
-          <div className="absolute left-[3.8rem] top-6 bottom-6 w-0.5 bg-gradient-to-b from-indigo-500/20 via-purple-500/50 to-indigo-500/20 rounded-full"></div>
-
-          {events.map((event, idx) => (
-            <div key={idx} className="relative z-10 cursor-pointer select-none" onClick={() => handleEventClick(event, activeDate)}>
-              {(event.type === 'flight' || event.flightNo === 'Saphir') ? (
-                 <div className={`w-full ${event.bg || 'bg-blue-600'} bg-opacity-90 rounded-3xl p-5 shadow-xl text-white mb-8 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 border border-white/10`}>
-                    <div className="absolute -right-6 -top-6 text-white/10 transform rotate-12">
-                      {event.flightNo === 'Saphir' ? <Train size={140} /> : <Plane size={140} />}
-                    </div>
-                    <div className="flex justify-between items-center mb-6 relative z-10">
-                      <div>
-                        <div className="text-3xl font-bold font-mono tracking-tighter">{event.time}</div>
-                        <div className="text-blue-100 font-medium text-xs mt-1">{event.title}</div>
-                      </div>
-                      <div className="flex flex-col items-center px-2 w-1/3">
-                         <span className="text-xs text-white/80 mb-2">{event.duration}</span>
-                         <div className="w-full h-0.5 bg-white/30 relative flex items-center justify-center">
-                           {event.flightNo === 'Saphir' ? 
-                             <Train size={14} className="text-white fill-current absolute bg-teal-700 px-1"/> : 
-                             <Plane size={14} className="text-white fill-current rotate-90 absolute bg-blue-600 px-1"/>
-                           }
-                         </div>
-                         <span className="text-[10px] font-bold mt-2 bg-white/20 px-2 py-0.5 rounded backdrop-blur-sm border border-white/10 whitespace-nowrap">{event.flightNo}</span>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-3xl font-bold font-mono tracking-tighter">{event.endTime}</div>
-                        <div className="text-blue-100 font-medium text-xs mt-1">{event.dest}</div>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center bg-black/20 rounded-xl p-3 backdrop-blur-md border border-white/5">
-                      <div className="flex items-center gap-2">
-                         <MapPin size={14} className="text-white/80"/>
-                         <span className="text-sm font-medium">{event.terminal}</span>
-                      </div>
-                      <Edit3 size={14} className="text-white/50"/>
-                    </div>
-                    {event.notes && (
-                        <div className="mt-3 text-xs text-white/70 bg-black/10 p-2 rounded flex items-start">
-                            <FileText size={12} className="mr-1 mt-0.5 flex-shrink-0"/> {event.notes}
-                        </div>
-                    )}
-                 </div>
-              ) : (
-                <div className="flex items-start group">
-                  <div className="flex flex-col items-center mr-4 pt-1 w-14 flex-shrink-0">
-                    <span className="text-lg font-bold font-mono tracking-tight opacity-90">{event.time}</span>
-                    <div className={`mt-3 w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 border-2 border-[#1e1b4b] ${
-                      event.category === 'food' ? 'bg-orange-400 text-white' :
-                      event.category === 'transport' ? 'bg-blue-500 text-white' :
-                      event.category === 'hotel' ? 'bg-purple-500 text-white' :
-                      event.category === 'shopping' ? 'bg-pink-500 text-white' :
-                      'bg-rose-500 text-white'
-                    }`}>
-                      <IconMap type={event.iconType || event.type} />
-                    </div>
-                  </div>
-                  
-                  <div className="flex-1 bg-white/10 hover:bg-white/15 backdrop-blur-md text-white rounded-2xl p-4 shadow-lg active:scale-[0.98] transition-all border border-white/5 relative overflow-hidden">
-                     <h3 className="text-lg font-bold mb-1 flex items-center text-white leading-tight justify-between">
-                        {event.title}
-                        <Edit3 size={14} className="text-white/30" />
-                     </h3>
-                     <div className="text-gray-300 text-sm flex items-start leading-relaxed mb-2">
-                        {event.sub}
-                     </div>
-                     
-                     {event.image && (
-                         <div className="mb-3 w-full h-32 rounded-lg overflow-hidden border border-white/10 relative">
-                             <div className="absolute inset-0 bg-black/20"></div>
-                             <img src={event.image} alt="Note" className="w-full h-full object-cover" />
-                         </div>
-                     )}
-
-                     {(event.notes || event.mapLink) && (
-                       <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
-                          {event.notes && (
-                            <div className="text-xs text-gray-300 flex items-start bg-white/5 p-2 rounded">
-                               <FileText size={12} className="mr-2 mt-0.5 flex-shrink-0 text-purple-300"/> 
-                               <span className="leading-relaxed">{event.notes}</span>
-                            </div>
-                          )}
-                          {event.mapLink && (
-                            <a href={event.mapLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center w-fit text-xs text-blue-200 hover:text-white bg-blue-500/30 px-2 py-1 rounded transition-colors">
-                               <MapPin size={10} className="mr-1"/> 查看地圖
-                            </a>
-                          )}
-                       </div>
-                     )}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // BudgetView
-  const BudgetView = () => {
-    const totalYen = expenses.reduce((acc, cur) => acc + cur.amount, 0);
-    const totalTwd = Math.round(totalYen * exchangeRate);
-    const payerStats = payers.reduce((acc, payer) => {
-      acc[payer] = expenses.filter(e => e.payer === payer).reduce((sum, e) => sum + e.amount, 0);
-      return acc;
-    }, {});
-
-    return (
-      <div className="px-4 pb-20 pt-4 animate-fade-in select-none">
-        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 shadow-xl mb-6 text-center relative overflow-hidden border border-white/10">
-          <button onClick={exportToCSV} className="absolute top-4 right-4 bg-white/20 p-2 rounded-lg hover:bg-white/30 active:scale-95 transition-all text-white flex items-center gap-1 text-xs">
-             <FileText size={14}/> 匯出
-          </button>
-          <div className="text-gray-200 text-sm mb-1 mt-2">總支出 Total</div>
-          <div className="text-4xl font-bold mb-2 font-mono">¥ {totalYen.toLocaleString()}</div>
-          <div className="text-xl text-purple-200 font-medium">≈ NT$ {totalTwd.toLocaleString()}</div>
-          
-          <div className="mt-6 grid grid-cols-2 gap-3">
-             {payers.map(payer => (
-               <div key={payer} className="bg-white/10 px-3 py-2 rounded-xl backdrop-blur-sm border border-white/5 text-left">
-                 <div className="text-xs text-gray-300 mb-1">{payer} 代付</div>
-                 <div className="font-bold text-sm">¥{payerStats[payer].toLocaleString()}</div>
-               </div>
-             ))}
-          </div>
-        </div>
-
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 mb-4 border border-white/5">
-          <div className="text-lg font-bold mb-4 flex items-center"><Plus size={18} className="mr-2"/> 新增消費</div>
-          <div className="space-y-3">
-            <div className="flex gap-3">
-                <input 
-                    type="date" 
-                    value={newExpenseDate}
-                    onChange={(e) => setNewExpenseDate(e.target.value)}
-                    className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-400"
-                />
-            </div>
-            <input type="text" placeholder="項目 (例: 淺草炸肉餅)" value={newExpenseName} onChange={(e) => setNewExpenseName(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"/>
-            <div className="flex gap-3">
-               <div className="relative flex-[2]">
-                 <span className="absolute left-4 top-3 text-gray-400 font-bold">¥</span>
-                 <input type="number" placeholder="0" value={newExpenseAmount} onChange={(e) => setNewExpenseAmount(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"/>
-               </div>
-               <div className="flex-1">
-                 <select value={newExpensePayer} onChange={(e) => setNewExpensePayer(e.target.value)} className="w-full h-full bg-black/20 border border-white/10 rounded-xl px-1 text-white focus:outline-none appearance-none text-center text-sm">
-                   {payers.map(p => <option key={p} value={p} className="text-black">{p}</option>)}
-                 </select>
-               </div>
-            </div>
-            <button onClick={handleAddExpense} className="w-full bg-purple-500 hover:bg-purple-400 text-white rounded-xl py-3 font-bold flex items-center justify-center transition-colors shadow-lg shadow-purple-500/30">新增紀錄</button>
-          </div>
-        </div>
-        <div className="space-y-3">
-          {expenses.slice().sort((a, b) => new Date(b.date) - new Date(a.date) || new Date(b.timestamp) - new Date(a.timestamp)).map((item, idx) => (
-              <div key={idx} className="bg-white/5 p-4 rounded-xl flex justify-between items-center border border-white/5">
-                 <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-white/5 text-xs text-gray-400 border border-white/5">
-                        <span className="font-bold text-white">{item.date ? item.date.split('-')[2] : '--'}</span>
-                        <span className="text-[10px]">{item.date ? item.date.split('-')[1] + '月' : ''}</span>
-                    </div>
-                    <div className="font-medium">
-                        {item.name}
-                        <div className="text-xs text-gray-400 mt-0.5">{item.payer} 代付</div>
-                    </div>
-                 </div>
-                 <div className="flex items-center gap-3">
-                    <div className="font-bold font-mono text-lg">¥ {item.amount.toLocaleString()}</div>
-                    <button 
-                        onClick={() => handleDeleteExpense(item.timestamp)}
-                        className="text-gray-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-                    >
-                        <Trash2 size={16}/>
-                    </button>
-                 </div>
-              </div>
-          ))}
         </div>
       </div>
     );
