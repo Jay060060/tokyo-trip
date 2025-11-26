@@ -219,6 +219,22 @@ const TravelApp = () => {
   const [expenses, setExpenses] = useState([]);
   const [checklist, setChecklist] = useState(INITIAL_CHECKLIST);
 
+  // Modal State (補回遺失的狀態)
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  
+  // Budget State (補回遺失的狀態)
+  const [newExpenseName, setNewExpenseName] = useState('');
+  const [newExpenseAmount, setNewExpenseAmount] = useState('');
+  const [newExpensePayer, setNewExpensePayer] = useState('Jay');
+  const [newExpenseDate, setNewExpenseDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // Checklist State (補回遺失的狀態)
+  const [newItemText, setNewItemText] = useState('');
+
+  const exchangeRate = 0.215;
+  const payers = ["Jay", "Tracy", "Emma", "IF"];
+
   // Firebase Init
   const [db, setDb] = useState(null);
   const isConfigValid = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("YOUR_API_KEY");
