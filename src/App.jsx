@@ -5,7 +5,7 @@ import {
   FileText, Link as LinkIcon, Plus, X, Wallet, Globe, Languages,
   Loader2, Trash2, Image as ImageIcon, Check, UploadCloud, 
   CloudRain, Cloud, Wind, Umbrella, Shirt, CloudSun, RefreshCw, Wifi, AlertTriangle,
-  Bug
+  Bug, Database
 } from 'lucide-react';
 
 // --- Firebase Imports ---
@@ -21,7 +21,8 @@ import {
   doc, 
   onSnapshot, 
   setDoc, 
-  updateDoc
+  updateDoc,
+  getDoc
 } from 'firebase/firestore';
 
 // --- 1. Error Boundary (防白屏護盾) ---
@@ -49,7 +50,7 @@ class ErrorBoundary extends React.Component {
               <Bug size={32} />
               <h1 className="text-2xl font-bold">程式發生錯誤</h1>
             </div>
-            <p className="mb-4 text-gray-300">請截圖此畫面給我，以便除錯。</p>
+            <p className="mb-4 text-gray-300">請截圖此畫面給我。</p>
             <div className="bg-black/50 p-4 rounded-lg overflow-auto max-h-60 font-mono text-xs mb-4 border border-red-500/30">
               <p className="text-red-300 font-bold mb-2">{this.state.error && this.state.error.toString()}</p>
             </div>
@@ -63,7 +64,7 @@ class ErrorBoundary extends React.Component {
 }
 
 // ============================================================================
-// ✅ 金鑰設定 (已填入)
+// ✅ 金鑰設定 (已填入您的金鑰)
 // ============================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
@@ -74,8 +75,8 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-// ✅ 關鍵修改：使用 v27 全新 ID，避開幽靈檔案
-const APP_ID = 'tokyo_trip_v27_clean'; 
+// ✅ v31 全新 ID
+const APP_ID = 'tokyo_trip_v31_final_fix'; 
 // ============================================================================
 
 // --- 資料與常數 ---
@@ -85,6 +86,7 @@ const LOCATIONS = {
     shuzenji: { lat: 34.9773, lon: 138.9343 }
 };
 
+// ⚠️ 完整的 5 天資料 ⚠️
 const INITIAL_ITINERARY = [
   {
     date: "11/28 (五)",
@@ -166,7 +168,7 @@ const INITIAL_ITINERARY = [
 
 const INITIAL_CHECKLIST = [{ id: 1, text: "護照", checked: false }, { id: 2, text: "機票", checked: false }];
 
-// --- 輔助元件 ---
+// --- 輔助元件 (圖示與類別) ---
 const IconMap = ({ type, size = 16 }) => {
   switch (type) {
     case 'food': return <Utensils size={size} />;
@@ -220,11 +222,13 @@ const TravelApp = () => {
   const [activeDate, setActiveDate] = useState(0);
   const [user, setUser] = useState(null);
   const [isSyncing, setIsSyncing] = useState(true);
+  const [syncError, setSyncError] = useState(null);
+  
   const [liveWeather, setLiveWeather] = useState({ temp: '--', range: '--', hourly: [] });
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState(false);
   
-  // Data States
+  // Data States (預設載入完整5天)
   const [itineraryData, setItineraryData] = useState(INITIAL_ITINERARY);
   const [expenses, setExpenses] = useState([]);
   const [checklist, setChecklist] = useState(INITIAL_CHECKLIST);
@@ -248,41 +252,59 @@ const TravelApp = () => {
 
   // Firebase Init
   const [db, setDb] = useState(null);
-  
+  const isConfigValid = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("YOUR_API_KEY");
+
   useEffect(() => {
+    if (!isConfigValid) {
+        setIsSyncing(false);
+        return;
+    }
     try {
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const firestore = getFirestore(app);
         setDb(firestore);
-        signInAnonymously(auth).catch(err => console.error("Auth Fail:", err));
+        signInAnonymously(auth).catch(err => {
+            console.error("Auth Fail:", err);
+            setSyncError("登入失敗，請檢查網路");
+        });
         onAuthStateChanged(auth, setUser);
     } catch (e) {
         console.error("Firebase Init Error:", e);
+        setSyncError("資料庫連線失敗");
         setIsSyncing(false);
     }
   }, []);
 
   // Sync Logic
-  // Force update to v27 path to restore full data
+  // 🚀 v31 關鍵邏輯：優先使用本地資料，背景強制覆蓋
   useEffect(() => {
     if (!user || !db) return;
     
     const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary');
     
+    // 1. 啟動時直接強制寫入一次，確保資料庫有完整 5 天資料 (覆蓋任何舊資料)
+    setDoc(itineraryRef, { data: INITIAL_ITINERARY }, { merge: true })
+        .then(() => console.log("Database forcibly synced with local 5-day data"))
+        .catch(err => console.error("Force write failed:", err));
+
+    // 2. 然後才開始監聽
     const unsub = onSnapshot(itineraryRef, (snap) => {
         setIsSyncing(false);
-        if (snap.exists() && snap.data().data) {
-            // 雙重檢查：如果抓下來的資料是空陣列或只有一筆，就用預設值覆蓋
+        if (snap.exists()) {
             const data = snap.data().data;
+            // 如果資料庫回傳的資料完整，就更新畫面
             if (Array.isArray(data) && data.length >= 5) {
                 setItineraryData(data);
             } else {
-                setDoc(itineraryRef, { data: INITIAL_ITINERARY });
+                console.warn("Database data incomplete, using local fallback");
+                // 如果資料庫資料不完整，保持使用本地 INITIAL_ITINERARY (不更新畫面)
             }
-        } else {
-            setDoc(itineraryRef, { data: INITIAL_ITINERARY });
         }
+    }, (err) => {
+        console.error("Sync failed:", err);
+        setSyncError("同步失敗，使用離線資料");
+        setIsSyncing(false);
     });
     return () => unsub();
   }, [user, db]);
@@ -313,6 +335,7 @@ const TravelApp = () => {
       const fetchW = async () => {
           setWeatherLoading(true);
           try {
+              // 使用本地變數 currentDay，避免依賴可能尚未更新的 state
               const day = (itineraryData[activeDate] || INITIAL_ITINERARY[activeDate]);
               const loc = LOCATIONS[day.geoKey || 'tokyo'];
               const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code&timezone=Asia%2FTokyo&forecast_days=2`);
@@ -474,6 +497,18 @@ const TravelApp = () => {
   const handleTranslateClick = () => {
     window.open("https://apps.apple.com/tw/app/%E7%BF%BB%E8%AD%AF/id1514844618", "_blank");
   };
+
+  if (!isConfigValid) {
+      return (
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 text-white">
+            <div className="bg-red-900/50 border border-red-500 p-6 rounded-xl text-center max-w-sm">
+                <AlertTriangle size={48} className="mx-auto mb-4 text-red-400"/>
+                <h2 className="text-xl font-bold mb-2">設定未完成</h2>
+                <p className="text-sm text-gray-300">請在程式碼中填入 Firebase 設定，App 才能運作。</p>
+            </div>
+        </div>
+      );
+  }
 
   const currentDay = itineraryData[activeDate] || INITIAL_ITINERARY[activeDate];
 
