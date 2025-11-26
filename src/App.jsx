@@ -24,32 +24,37 @@ import {
   updateDoc
 } from 'firebase/firestore';
 
-// --- 1. Error Boundary (最外層防護) ---
+// --- 1. Error Boundary (防白屏護盾) ---
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+    return { hasError: true };
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("Critical Error:", error, errorInfo);
+    this.setState({ error, errorInfo });
+    console.error("App Crash:", error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '20px', backgroundColor: '#1a1a1a', color: 'white', height: '100vh' }}>
-          <h1>⚠️ 應用程式發生錯誤</h1>
-          <pre style={{ background: '#333', padding: '10px', borderRadius: '5px' }}>
-            {this.state.error?.toString()}
-          </pre>
-          <button onClick={() => window.location.reload()} style={{ marginTop: '20px', padding: '10px', background: 'red', color: 'white', border: 'none' }}>
-            重新整理
-          </button>
+        <div className="min-h-screen bg-gray-900 text-white p-8 flex flex-col items-center justify-center">
+          <div className="bg-red-900/30 border-2 border-red-500 rounded-2xl p-6 max-w-lg w-full">
+            <div className="flex items-center gap-3 mb-4 text-red-400">
+              <Bug size={32} />
+              <h1 className="text-2xl font-bold">程式發生錯誤</h1>
+            </div>
+            <p className="mb-4 text-gray-300">請截圖此畫面給我。</p>
+            <div className="bg-black/50 p-4 rounded-lg overflow-auto max-h-60 font-mono text-xs mb-4 border border-red-500/30">
+              <p className="text-red-300 font-bold mb-2">{this.state.error && this.state.error.toString()}</p>
+            </div>
+            <button onClick={() => window.location.reload()} className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold">重新整理</button>
+          </div>
         </div>
       );
     }
@@ -58,7 +63,7 @@ class ErrorBoundary extends React.Component {
 }
 
 // ============================================================================
-// ✅ 金鑰設定 (已填入)
+// ✅ 金鑰設定
 // ============================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
@@ -69,8 +74,8 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-// ✅ v35 全新 ID
-const APP_ID = 'tokyo_trip_v35_final_rescue'; 
+// ✅ v36 UI 還原版 ID
+const APP_ID = 'tokyo_trip_v36_ui_restore'; 
 // ============================================================================
 
 // --- 資料與常數 ---
@@ -161,7 +166,7 @@ const INITIAL_ITINERARY = [
 
 const INITIAL_CHECKLIST = [{ id: 1, text: "護照", checked: false }, { id: 2, text: "機票", checked: false }];
 
-// --- 輔助元件 (圖示與類別) ---
+// --- 輔助元件 ---
 const IconMap = ({ type, size = 16 }) => {
   switch (type) {
     case 'food': return <Utensils size={size} />;
@@ -201,13 +206,13 @@ const WeatherStrip = ({ hourlyWeather, isLoading, isError }) => (
     <div className="flex space-x-4 overflow-x-auto pb-2 no-scrollbar mt-3 min-h-[4rem]">
         {isLoading ? <div className="text-xs text-gray-400 w-full text-center"><Loader2 className="animate-spin inline mr-1"/>載入中...</div> : 
          isError ? <div className="text-xs text-red-300 w-full text-center"><Wifi className="inline mr-1"/>無法連線</div> :
-         hourlyWeather && hourlyWeather.length > 0 ? hourlyWeather.map((w, i) => (
+         hourlyWeather.map((w, i) => (
             <div key={i} className="flex flex-col items-center min-w-[3rem] bg-white/10 rounded-lg p-2 flex-shrink-0 border border-white/5">
                 <span className="text-[10px] text-gray-300">{w.time}</span>
                 <div className="text-yellow-300 my-1">{getWeatherIcon(w.code)}</div>
                 <span className="text-xs font-bold">{w.temp}°</span>
             </div>
-         )) : null}
+         ))}
     </div>
 );
 
@@ -343,25 +348,84 @@ const ItineraryView = ({ currentDay, weatherLoading, liveWeather, weatherError, 
               <WeatherStrip hourlyWeather={liveWeather.hourly} isLoading={weatherLoading} isError={weatherError} />
           </div>
         </div>
-        <div className="space-y-8 relative pl-2">
+        
+        {/* 🚀 UI 還原：分開時間軸樣式 */}
+        <div className="space-y-6 relative pl-2">
           <div className="absolute left-[3.8rem] top-6 bottom-6 w-0.5 bg-gradient-to-b from-indigo-500/20 via-purple-500/50 to-indigo-500/20 rounded-full"></div>
           {events.map((event, idx) => (
             <div key={idx} className="relative z-10 cursor-pointer select-none" onClick={() => handleEventClick(event, activeDate)}>
-              <div className={`w-full ${event.category === 'flight' ? 'bg-blue-600' : 'bg-white/10'} ${event.category === 'flight' ? 'bg-opacity-90' : ''} rounded-3xl p-5 shadow-xl text-white mb-8 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 border border-white/10`}>
-                 <div className="flex justify-between items-center mb-6 relative z-10">
-                    <div>
-                        <div className="text-3xl font-bold font-mono tracking-tighter">{event.time}</div>
-                        <div className="text-blue-100 font-medium text-xs mt-1">{event.title}</div>
+              {/* 航班特殊樣式 (維持大卡片) */}
+              {event.category === 'flight' ? (
+                  <div className="w-full bg-blue-600 bg-opacity-90 rounded-3xl p-5 shadow-xl text-white mb-8 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 border border-white/10">
+                     <div className="flex justify-between items-center mb-6 relative z-10">
+                        <div>
+                            <div className="text-3xl font-bold font-mono tracking-tighter">{event.time}</div>
+                            <div className="text-blue-100 font-medium text-xs mt-1">{event.title}</div>
+                        </div>
+                        <div className="flex flex-col items-center px-2 w-1/3">
+                             <span className="text-xs text-white/80 mb-2">{event.duration}</span>
+                             <div className="w-full h-0.5 bg-white/30 relative flex items-center justify-center">
+                               <Plane size={14} className="text-white fill-current rotate-90 absolute bg-blue-600 px-1"/>
+                             </div>
+                             <span className="text-[10px] font-bold mt-2 bg-white/20 px-2 py-0.5 rounded backdrop-blur-sm border border-white/10 whitespace-nowrap">{event.flightNo}</span>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-3xl font-bold font-mono tracking-tighter">{event.endTime}</div>
+                            <div className="text-blue-100 font-medium text-xs mt-1">{event.dest}</div>
+                        </div>
+                     </div>
+                     {event.notes && <div className="mt-3 text-xs text-white/70 bg-black/10 p-2 rounded">{event.notes}</div>}
+                  </div>
+              ) : (
+                  /* 一般行程樣式 (還原為左右分離設計) */
+                  <div className="flex items-start group mb-6">
+                    <div className="flex flex-col items-center mr-4 pt-1 w-14 flex-shrink-0">
+                        <span className="text-lg font-bold font-mono tracking-tight opacity-90">{event.time}</span>
+                        <div className={`mt-3 w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 border-2 border-[#1e1b4b] ${
+                            event.category === 'food' ? 'bg-orange-400 text-white' :
+                            event.category === 'transport' ? 'bg-blue-500 text-white' :
+                            event.category === 'hotel' ? 'bg-purple-500 text-white' :
+                            event.category === 'shopping' ? 'bg-pink-500 text-white' :
+                            'bg-rose-500 text-white'
+                        }`}>
+                           <IconMap type={event.iconType || event.type} />
+                        </div>
                     </div>
-                    <div className="flex flex-col items-center px-2 w-1/3">
-                         <div className="w-full h-0.5 bg-white/30 relative flex items-center justify-center">
-                           {event.category === 'flight' ? <Plane size={14} className="text-white fill-current rotate-90 absolute bg-blue-600 px-1"/> : null}
+                    
+                    <div className="flex-1 bg-white/10 hover:bg-white/15 backdrop-blur-md text-white rounded-2xl p-4 shadow-lg active:scale-[0.98] transition-all border border-white/5 relative overflow-hidden">
+                         <h3 className="text-lg font-bold mb-1 flex items-center text-white leading-tight justify-between">
+                            {event.title}
+                            <Edit3 size={14} className="text-white/30" />
+                         </h3>
+                         <div className="text-gray-300 text-sm flex items-start leading-relaxed mb-2">
+                            {event.sub}
                          </div>
+                         
+                         {event.image && (
+                             <div className="mb-3 w-full h-32 rounded-lg overflow-hidden border border-white/10 relative">
+                                 <div className="absolute inset-0 bg-black/20"></div>
+                                 <img src={event.image} alt="Note" className="w-full h-full object-cover" />
+                             </div>
+                         )}
+
+                         {(event.notes || event.mapLink) && (
+                           <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
+                              {event.notes && (
+                                <div className="text-xs text-gray-300 flex items-start bg-white/5 p-2 rounded">
+                                   <FileText size={12} className="mr-2 mt-0.5 flex-shrink-0 text-purple-300"/> 
+                                   <span className="leading-relaxed">{event.notes}</span>
+                                </div>
+                              )}
+                              {event.mapLink && (
+                                <a href={event.mapLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center w-fit text-xs text-blue-200 hover:text-white bg-blue-500/30 px-2 py-1 rounded transition-colors">
+                                   <MapPin size={10} className="mr-1"/> 查看地圖
+                                </a>
+                              )}
+                           </div>
+                         )}
                     </div>
-                 </div>
-                 <div className="text-sm text-gray-300">{event.sub || event.dest}</div>
-                 {event.notes && <div className="mt-3 text-xs text-gray-400 bg-black/20 p-2 rounded">{event.notes}</div>}
-              </div>
+                  </div>
+              )}
             </div>
           ))}
         </div>
