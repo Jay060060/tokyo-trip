@@ -63,7 +63,7 @@ class ErrorBoundary extends React.Component {
 }
 
 // ============================================================================
-// ✅ 我已經幫您填好金鑰了，直接使用即可，不用修改！
+// ✅ 您提供的金鑰 (已填入)
 // ============================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
@@ -74,8 +74,8 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-// ✅ 全新 ID v22，確保讀取全新完整的 5 天資料
-const APP_ID = 'tokyo_trip_2025_final_v22'; 
+// ✅ 關鍵修改：換成 v23 強制重置，這會建立一個全新的資料庫路徑，不受舊資料影響
+const APP_ID = 'tokyo_trip_v23_force_reset'; 
 // ============================================================================
 
 // --- 資料與常數 ---
@@ -85,7 +85,6 @@ const LOCATIONS = {
     shuzenji: { lat: 34.9773, lon: 138.9343 }
 };
 
-// ⚠️ 這裡保證是完整的 5 天資料 ⚠️
 const INITIAL_ITINERARY = [
   {
     date: "11/28 (五)",
@@ -249,8 +248,13 @@ const TravelApp = () => {
 
   // Firebase Init
   const [db, setDb] = useState(null);
-  
+  const isConfigValid = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("YOUR_API_KEY");
+
   useEffect(() => {
+    if (!isConfigValid) {
+        setIsSyncing(false);
+        return;
+    }
     try {
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -265,7 +269,7 @@ const TravelApp = () => {
   }, []);
 
   // Sync Logic
-  // Force update to v22 path to restore full data
+  // ⚠️ APP_ID 更新為 v23，強制資料庫使用新路徑 ⚠️
   useEffect(() => {
     if (!user || !db) return;
     
@@ -466,6 +470,18 @@ const TravelApp = () => {
   const handleTranslateClick = () => {
     window.open("https://apps.apple.com/tw/app/%E7%BF%BB%E8%AD%AF/id1514844618", "_blank");
   };
+
+  if (!isConfigValid) {
+      return (
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 text-white">
+            <div className="bg-red-900/50 border border-red-500 p-6 rounded-xl text-center max-w-sm">
+                <AlertTriangle size={48} className="mx-auto mb-4 text-red-400"/>
+                <h2 className="text-xl font-bold mb-2">設定未完成</h2>
+                <p className="text-sm text-gray-300">請在程式碼中填入 Firebase 設定，App 才能運作。</p>
+            </div>
+        </div>
+      );
+  }
 
   const currentDay = itineraryData[activeDate] || INITIAL_ITINERARY[activeDate];
 
