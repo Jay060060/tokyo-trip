@@ -271,15 +271,16 @@ const TravelApp = () => {
   }, []);
 
   // Sync Logic
+  // Force update to v14 path to restore full data
   useEffect(() => {
     if (!user || !db) return;
     
-    const itineraryRef = doc(db, 'trips', APP_ID_CONST, 'data', 'itinerary');
+    const itineraryRef = doc(db, 'trips', APP_ID_CONST, 'data', 'itinerary_v14_complete');
     
     const unsub = onSnapshot(itineraryRef, (snap) => {
         setIsSyncing(false);
         if (snap.exists() && snap.data().data) setItineraryData(snap.data().data);
-        else setDoc(doc(db, 'trips', APP_ID_CONST, 'data', 'itinerary'), { data: INITIAL_ITINERARY });
+        else setDoc(doc(db, 'trips', APP_ID_CONST, 'data', 'itinerary_v14_complete'), { data: INITIAL_ITINERARY });
     });
     return () => unsub();
   }, [user, db]);
@@ -287,7 +288,7 @@ const TravelApp = () => {
   // Sync Expenses
   useEffect(() => {
     if (!user || !db) return;
-    const expensesRef = doc(db, 'trips', APP_ID_CONST, 'data', 'expenses');
+    const expensesRef = doc(db, 'trips', APP_ID_CONST, 'data', 'expenses_v14_complete');
     const unsub = onSnapshot(expensesRef, (snap) => {
       if (snap.exists()) setExpenses(snap.data().list || []);
     });
@@ -297,7 +298,7 @@ const TravelApp = () => {
   // Sync Checklist
   useEffect(() => {
     if (!user || !db) return;
-    const checklistRef = doc(db, 'trips', APP_ID_CONST, 'data', 'checklist');
+    const checklistRef = doc(db, 'trips', APP_ID_CONST, 'data', 'checklist_v14_complete');
     const unsub = onSnapshot(checklistRef, (snap) => {
       if (snap.exists()) setChecklist(snap.data().list || INITIAL_CHECKLIST);
       else setDoc(checklistRef, { list: INITIAL_CHECKLIST });
@@ -348,7 +349,7 @@ const TravelApp = () => {
           dayEvents[eventIndex] = editingEvent; 
           setItineraryData(newItinerary); 
           if (db) {
-            const itineraryRef = doc(db, 'trips', APP_ID_CONST, 'data', 'itinerary');
+            const itineraryRef = doc(db, 'trips', APP_ID_CONST, 'data', 'itinerary_v14_complete');
             await updateDoc(itineraryRef, { data: newItinerary });
           }
         }
@@ -365,7 +366,7 @@ const TravelApp = () => {
           newItinerary[editingEvent.dateIndex].events = updatedEvents;
           setItineraryData(newItinerary);
           if (db) {
-            const itineraryRef = doc(db, 'trips', APP_ID_CONST, 'data', 'itinerary');
+            const itineraryRef = doc(db, 'trips', APP_ID_CONST, 'data', 'itinerary_v14_complete');
             await updateDoc(itineraryRef, { data: newItinerary });
           }
       }
@@ -394,7 +395,7 @@ const TravelApp = () => {
       setChecklist(updatedList);
       setNewItemText('');
       if (db) {
-        const checklistRef = doc(db, 'trips', APP_ID_CONST, 'data', 'checklist');
+        const checklistRef = doc(db, 'trips', APP_ID_CONST, 'data', 'checklist_v14_complete');
         await setDoc(checklistRef, { list: updatedList }, { merge: true });
       }
   };
@@ -405,7 +406,7 @@ const TravelApp = () => {
       );
       setChecklist(updatedList);
       if (db) {
-        const checklistRef = doc(db, 'trips', APP_ID_CONST, 'data', 'checklist');
+        const checklistRef = doc(db, 'trips', APP_ID_CONST, 'data', 'checklist_v14_complete');
         await setDoc(checklistRef, { list: updatedList }, { merge: true });
       }
   };
@@ -415,7 +416,7 @@ const TravelApp = () => {
       const updatedList = checklist.filter(item => item.id !== id);
       setChecklist(updatedList);
       if (db) {
-        const checklistRef = doc(db, 'trips', APP_ID_CONST, 'data', 'checklist');
+        const checklistRef = doc(db, 'trips', APP_ID_CONST, 'data', 'checklist_v14_complete');
         await setDoc(checklistRef, { list: updatedList }, { merge: true });
       }
   };
@@ -432,7 +433,7 @@ const TravelApp = () => {
       const updatedExpenses = [...expenses, newExpense];
       setExpenses(updatedExpenses);
       if (db) {
-        const expensesRef = doc(db, 'trips', APP_ID_CONST, 'data', 'expenses');
+        const expensesRef = doc(db, 'trips', APP_ID_CONST, 'data', 'expenses_v14_complete');
         await setDoc(expensesRef, { list: updatedExpenses }, { merge: true });
       }
       setNewExpenseName('');
@@ -476,7 +477,7 @@ const TravelApp = () => {
 
   const currentDay = itineraryData[activeDate] || INITIAL_ITINERARY[activeDate];
 
-  // Itinerary View
+  // 補回的 ItineraryView
   const ItineraryView = () => {
     const events = Array.isArray(currentDay.events) ? currentDay.events : [];
 
@@ -625,6 +626,7 @@ const TravelApp = () => {
     );
   };
 
+  // 補回的 BudgetView
   const BudgetView = () => {
     const totalYen = expenses.reduce((acc, cur) => acc + cur.amount, 0);
     const totalTwd = Math.round(totalYen * exchangeRate);
@@ -698,6 +700,63 @@ const TravelApp = () => {
       </div>
     );
   };
+
+  // 補回的 ChecklistView
+  const ChecklistView = () => (
+      <div className="px-4 pb-20 pt-4 animate-fade-in select-none">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6 border border-white/10 shadow-lg">
+              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-white">
+                  <Check size={24} className="text-green-400"/> 行李清單
+              </h2>
+              
+              <div className="flex gap-2 mb-6">
+                  <input 
+                      type="text" 
+                      placeholder="輸入想帶的物品..." 
+                      value={newItemText}
+                      onChange={(e) => setNewItemText(e.target.value)}
+                      className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-colors shadow-inner"
+                  />
+                  <button 
+                      onClick={handleAddChecklistItem}
+                      className="bg-purple-500 hover:bg-purple-600 text-white rounded-xl px-4 flex items-center justify-center transition-colors shadow-lg"
+                  >
+                      <Plus size={20}/>
+                  </button>
+              </div>
+
+              <div className="space-y-3">
+                  {checklist.map((item) => (
+                      <div 
+                          key={item.id} 
+                          className="group flex items-center justify-between bg-white/5 p-3 rounded-xl hover:bg-white/10 transition-all border border-white/5 shadow-sm"
+                      >
+                          <div 
+                              className="flex items-center flex-1 cursor-pointer"
+                              onClick={() => toggleChecklistItem(item.id)}
+                          >
+                              <div className={`w-6 h-6 rounded-md border-2 mr-3 flex items-center justify-center transition-all ${item.checked ? 'bg-green-500 border-green-500' : 'border-gray-500 bg-transparent'}`}>
+                                  {item.checked && <Check size={14} className="text-white" />}
+                              </div>
+                              <span className={`text-base transition-all ${item.checked ? 'text-gray-500 line-through decoration-2 decoration-gray-600' : 'text-white'}`}>
+                                  {item.text}
+                              </span>
+                          </div>
+                          <button 
+                              onClick={() => deleteChecklistItem(item.id)}
+                              className="text-gray-600 hover:text-red-400 p-2 rounded-full hover:bg-white/5 transition-colors opacity-50 group-hover:opacity-100"
+                          >
+                              <Trash2 size={16}/>
+                          </button>
+                      </div>
+                  ))}
+                  {checklist.length === 0 && (
+                      <div className="text-center text-gray-500 py-8">清單是空的，加點東西吧！</div>
+                  )}
+              </div>
+          </div>
+      </div>
+  );
 
   const EditModal = () => {
     if (!isModalOpen || !editingEvent) return null;
