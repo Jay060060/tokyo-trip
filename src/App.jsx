@@ -5,7 +5,7 @@ import {
   FileText, Link as LinkIcon, Plus, X, Wallet, Globe, Languages,
   Loader2, Trash2, Image as ImageIcon, Check, UploadCloud, 
   CloudRain, Cloud, Wind, Umbrella, Shirt, CloudSun, RefreshCw, Wifi, AlertTriangle,
-  Bug
+  Bug, User
 } from 'lucide-react';
 
 // --- Firebase Imports ---
@@ -49,7 +49,7 @@ class ErrorBoundary extends React.Component {
               <Bug size={32} />
               <h1 className="text-2xl font-bold">程式發生錯誤</h1>
             </div>
-            <p className="mb-4 text-gray-300">請截圖此畫面給我。</p>
+            <p className="mb-4 text-gray-300">請截圖此畫面給我，以便除錯。</p>
             <div className="bg-black/50 p-4 rounded-lg overflow-auto max-h-60 font-mono text-xs mb-4 border border-red-500/30">
               <p className="text-red-300 font-bold mb-2">{this.state.error && this.state.error.toString()}</p>
             </div>
@@ -63,7 +63,7 @@ class ErrorBoundary extends React.Component {
 }
 
 // ============================================================================
-// ✅ 金鑰設定
+// ✅ 金鑰設定 (已填入)
 // ============================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
@@ -74,8 +74,8 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-// ✅ v36 UI 還原版 ID
-const APP_ID = 'tokyo_trip_v36_ui_restore'; 
+// ✅ v37 全新 ID，確保乾淨開始 (支援個人清單)
+const APP_ID = 'tokyo_trip_v37_multi_checklist'; 
 // ============================================================================
 
 // --- 資料與常數 ---
@@ -166,6 +166,8 @@ const INITIAL_ITINERARY = [
 
 const INITIAL_CHECKLIST = [{ id: 1, text: "護照", checked: false }, { id: 2, text: "機票", checked: false }];
 
+const CHECKLIST_MEMBERS = ["Tracy", "Jay", "Emma", "Remy", "IF", "爸爸", "媽媽"];
+
 // --- 輔助元件 ---
 const IconMap = ({ type, size = 16 }) => {
   switch (type) {
@@ -216,26 +218,75 @@ const WeatherStrip = ({ hourlyWeather, isLoading, isError }) => (
     </div>
 );
 
-const ChecklistView = ({ checklist, newItemText, setNewItemText, handleAddChecklistItem, toggleChecklistItem, deleteChecklistItem }) => (
+const ChecklistView = ({ currentMember, setCurrentMember, checklist, newItemText, setNewItemText, handleAddChecklistItem, toggleChecklistItem, deleteChecklistItem }) => (
     <div className="px-4 pb-20 pt-4 animate-fade-in select-none">
+        {/* 成員選擇器 */}
+        <div className="flex overflow-x-auto gap-2 mb-4 pb-2 no-scrollbar">
+            {CHECKLIST_MEMBERS.map(member => (
+                <button
+                    key={member}
+                    onClick={() => setCurrentMember(member)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                        currentMember === member 
+                        ? 'bg-white text-black shadow-lg scale-105' 
+                        : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                    }`}
+                >
+                    {member}
+                </button>
+            ))}
+        </div>
+
         <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6 border border-white/10 shadow-lg">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-white">
-                <Check size={24} className="text-green-400"/> 行李清單
-            </h2>
-            <div className="flex gap-2 mb-6">
-                <input type="text" placeholder="輸入想帶的物品..." value={newItemText} onChange={(e) => setNewItemText(e.target.value)} className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-colors shadow-inner"/>
-                <button onClick={handleAddChecklistItem} className="bg-purple-500 hover:bg-purple-600 text-white rounded-xl px-4 flex items-center justify-center transition-colors shadow-lg"><Plus size={20}/></button>
+            <div className="flex items-center gap-2 mb-4">
+                <User size={20} className="text-green-400"/>
+                <h2 className="text-xl font-bold text-white">
+                    {currentMember} 的清單
+                </h2>
             </div>
+            
+            <div className="flex gap-2 mb-6">
+                <input 
+                    type="text" 
+                    placeholder="輸入想帶的物品..." 
+                    value={newItemText}
+                    onChange={(e) => setNewItemText(e.target.value)}
+                    className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-colors shadow-inner"
+                />
+                <button 
+                    onClick={handleAddChecklistItem}
+                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-xl px-4 flex items-center justify-center transition-colors shadow-lg"
+                >
+                    <Plus size={20}/>
+                </button>
+            </div>
+
             <div className="space-y-3">
                 {checklist.map((item) => (
-                    <div key={item.id} className="group flex items-center justify-between bg-white/5 p-3 rounded-xl hover:bg-white/10 transition-all border border-white/5 shadow-sm">
-                        <div className="flex items-center flex-1 cursor-pointer" onClick={() => toggleChecklistItem(item.id)}>
-                            <div className={`w-6 h-6 rounded-md border-2 mr-3 flex items-center justify-center transition-all ${item.checked ? 'bg-green-500 border-green-500' : 'border-gray-500 bg-transparent'}`}>{item.checked && <Check size={14} className="text-white" />}</div>
+                    <div 
+                        key={item.id} 
+                        className="group flex items-center justify-between bg-white/5 p-3 rounded-xl hover:bg-white/10 transition-all border border-white/5 shadow-sm"
+                    >
+                        <div 
+                            className="flex items-center flex-1 cursor-pointer"
+                            onClick={() => toggleChecklistItem(item.id)}
+                        >
+                            <div className={`w-6 h-6 rounded-md border-2 mr-3 flex items-center justify-center transition-all ${item.checked ? 'bg-green-500 border-green-500' : 'border-gray-500 bg-transparent'}`}>
+                                {item.checked && <Check size={14} className="text-white" />}
+                            </div>
                             <span className={`text-base transition-all ${item.checked ? 'text-gray-500 line-through decoration-2 decoration-gray-600' : 'text-white'}`}>{item.text}</span>
                         </div>
-                        <button onClick={() => deleteChecklistItem(item.id)} className="text-gray-600 hover:text-red-400 p-2 rounded-full hover:bg-white/5 transition-colors opacity-50 group-hover:opacity-100"><Trash2 size={16}/></button>
+                        <button 
+                            onClick={() => deleteChecklistItem(item.id)}
+                            className="text-gray-600 hover:text-red-400 p-2 rounded-full hover:bg-white/5 transition-colors opacity-50 group-hover:opacity-100"
+                        >
+                            <Trash2 size={16}/>
+                        </button>
                     </div>
                 ))}
+                {checklist.length === 0 && (
+                    <div className="text-center text-gray-500 py-8">這個清單還是空的，加點東西吧！</div>
+                )}
             </div>
         </div>
     </div>
@@ -471,6 +522,7 @@ const TravelApp = () => {
   const [itineraryData, setItineraryData] = useState(INITIAL_ITINERARY);
   const [expenses, setExpenses] = useState([]);
   const [checklist, setChecklist] = useState(INITIAL_CHECKLIST);
+  const [currentMember, setCurrentMember] = useState('Tracy');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -500,15 +552,15 @@ const TravelApp = () => {
     }
   }, []);
 
-  // Sync Logic with Auto-Fix
+  // Sync Logic
   useEffect(() => {
     if (!user || !db) return;
+    
     const itineraryRef = doc(db, 'trips', APP_ID, 'data', 'itinerary');
     const unsub = onSnapshot(itineraryRef, (snap) => {
         setIsSyncing(false);
         if (snap.exists()) {
             const data = snap.data().data;
-            // 安全檢查：如果資料庫少於 5 天，自動用預設資料修復
             if (Array.isArray(data) && data.length >= 5) {
                 setItineraryData(data);
             } else {
@@ -529,12 +581,16 @@ const TravelApp = () => {
     return () => unsub();
   }, [user, db]);
 
+  // Checklist Sync Logic (Per Member)
   useEffect(() => {
     if (!user || !db) return;
-    const checklistRef = doc(db, 'trips', APP_ID, 'data', 'checklist');
-    const unsub = onSnapshot(checklistRef, (snap) => { if (snap.exists()) setChecklist(snap.data().list || INITIAL_CHECKLIST); else setDoc(checklistRef, { list: INITIAL_CHECKLIST }); });
+    const checklistRef = doc(db, 'trips', APP_ID, 'data', `checklist_v37_${currentMember}`);
+    const unsub = onSnapshot(checklistRef, (snap) => {
+      if (snap.exists()) setChecklist(snap.data().list || INITIAL_CHECKLIST);
+      else setDoc(checklistRef, { list: INITIAL_CHECKLIST });
+    });
     return () => unsub();
-  }, [user, db]);
+  }, [user, db, currentMember]);
 
   useEffect(() => {
       const fetchW = async () => {
@@ -603,18 +659,18 @@ const TravelApp = () => {
       const updatedList = [newItem, ...checklist];
       setChecklist(updatedList);
       setNewItemText('');
-      if (db) await setDoc(doc(db, 'trips', APP_ID, 'data', 'checklist'), { list: updatedList }, { merge: true });
+      if (db) await setDoc(doc(db, 'trips', APP_ID, 'data', `checklist_v37_${currentMember}`), { list: updatedList }, { merge: true });
   };
   const toggleChecklistItem = async (id) => {
       const updatedList = checklist.map(item => item.id === id ? { ...item, checked: !item.checked } : item);
       setChecklist(updatedList);
-      if (db) await setDoc(doc(db, 'trips', APP_ID, 'data', 'checklist'), { list: updatedList }, { merge: true });
+      if (db) await setDoc(doc(db, 'trips', APP_ID, 'data', `checklist_v37_${currentMember}`), { list: updatedList }, { merge: true });
   };
   const deleteChecklistItem = async (id) => {
       if(!confirm("刪除此項目？")) return;
       const updatedList = checklist.filter(item => item.id !== id);
       setChecklist(updatedList);
-      if (db) await setDoc(doc(db, 'trips', APP_ID, 'data', 'checklist'), { list: updatedList }, { merge: true });
+      if (db) await setDoc(doc(db, 'trips', APP_ID, 'data', `checklist_v37_${currentMember}`), { list: updatedList }, { merge: true });
   };
   const handleAddExpense = async () => {
     if (newExpenseName && newExpenseAmount && newExpenseDate) {
@@ -673,7 +729,7 @@ const TravelApp = () => {
         <div className="mt-4 px-4">
             {activeTab === 'itinerary' && <ItineraryView currentDay={currentDay} weatherLoading={weatherLoading} liveWeather={liveWeather} weatherError={weatherError} activeDate={activeDate} setActiveDate={setActiveDate} handleEventClick={handleEventClick} />}
             {activeTab === 'budget' && <BudgetView expenses={expenses} exchangeRate={exchangeRate} payers={payers} newExpenseName={newExpenseName} setNewExpenseName={setNewExpenseName} newExpenseAmount={newExpenseAmount} setNewExpenseAmount={setNewExpenseAmount} newExpensePayer={newExpensePayer} setNewExpensePayer={setNewExpensePayer} newExpenseDate={newExpenseDate} setNewExpenseDate={setNewExpenseDate} handleAddExpense={handleAddExpense} handleDeleteExpense={handleDeleteExpense} exportToCSV={exportToCSV} />}
-            {activeTab === 'checklist' && <ChecklistView checklist={checklist} newItemText={newItemText} setNewItemText={setNewItemText} handleAddChecklistItem={handleAddChecklistItem} toggleChecklistItem={toggleChecklistItem} deleteChecklistItem={deleteChecklistItem} />}
+            {activeTab === 'checklist' && <ChecklistView currentMember={currentMember} setCurrentMember={setCurrentMember} checklist={checklist} newItemText={newItemText} setNewItemText={setNewItemText} handleAddChecklistItem={handleAddChecklistItem} toggleChecklistItem={toggleChecklistItem} deleteChecklistItem={deleteChecklistItem} />}
         </div>
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-md px-6 z-40 pointer-events-none">
           <div className="flex justify-end pointer-events-auto">
