@@ -36,8 +36,6 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-// 自動判斷環境 (預覽用內建，部署用手動)
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : manualConfig;
 
 // ✅ 強制使用純文字 ID，確保全域可讀取
 const app = initializeApp(firebaseConfig);
