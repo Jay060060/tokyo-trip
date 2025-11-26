@@ -70,7 +70,7 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-const app = initializeApp(firebaseConfig);
+const APP_ID = 'tokyo_trip_2025_final_v21'; 
 // ============================================================================
 
 // --- 資料與常數 ---
