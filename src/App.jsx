@@ -5,7 +5,7 @@ import {
   FileText, Link as LinkIcon, Plus, X, Wallet, Globe, Languages,
   Loader2, Trash2, Image as ImageIcon, Check, UploadCloud, 
   CloudRain, Cloud, Wind, Umbrella, Shirt, CloudSun, RefreshCw, Wifi, AlertTriangle,
-  Bug
+  Bug, RotateCcw
 } from 'lucide-react';
 
 // --- Firebase Imports ---
@@ -63,7 +63,7 @@ class ErrorBoundary extends React.Component {
 }
 
 // ============================================================================
-// ✅ 金鑰設定 (已填入您的資訊)
+// ✅ 金鑰設定
 // ============================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDoxUP6SH8tPVifz_iSS1PItBuoImIqVBk",
@@ -74,8 +74,8 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-// ✅ 回歸單純的 ID，配合您手動清空資料庫的操作
-const APP_ID = 'tokyo_trip_final'; 
+// ✅ 使用 v25 ID
+const APP_ID = 'tokyo_trip_v25_emergency'; 
 // ============================================================================
 
 // --- 資料與常數 ---
@@ -85,7 +85,7 @@ const LOCATIONS = {
     shuzenji: { lat: 34.9773, lon: 138.9343 }
 };
 
-// ⚠️ 再次確認：這是完整的 5 天資料 ⚠️
+// ⚠️ 完整 5 天行程資料 ⚠️
 const INITIAL_ITINERARY = [
   {
     date: "11/28 (五)",
@@ -263,6 +263,22 @@ const TravelApp = () => {
         setIsSyncing(false);
     }
   }, []);
+
+  // --- Force Reset Handler ---
+  const handleForceReset = async () => {
+      if (!confirm("確定要重置所有資料嗎？這將會恢復為預設的 5 天行程，並清除所有自訂修改。")) return;
+      if (!db) return;
+      
+      try {
+          await setDoc(doc(db, 'trips', APP_ID, 'data', 'itinerary'), { data: INITIAL_ITINERARY });
+          await setDoc(doc(db, 'trips', APP_ID, 'data', 'checklist'), { list: INITIAL_CHECKLIST });
+          await setDoc(doc(db, 'trips', APP_ID, 'data', 'expenses'), { list: [] });
+          alert("資料已重置！");
+          window.location.reload();
+      } catch (e) {
+          alert("重置失敗：" + e.message);
+      }
+  };
 
   // Sync Logic
   useEffect(() => {
@@ -921,6 +937,10 @@ const TravelApp = () => {
           <div className="flex justify-end pointer-events-auto">
             <button onClick={handleTranslateClick} className="group flex items-center gap-2 bg-white text-indigo-900 pr-5 pl-4 py-3 rounded-full shadow-2xl shadow-purple-500/40 hover:scale-105 transition-all border-4 border-indigo-100/20 active:scale-95">
                <Languages size={24} className="group-hover:rotate-12 transition-transform"/><span className="font-bold text-lg">翻譯</span>
+            </button>
+            {/* 強制重置按鈕 - 救援用 */}
+            <button onClick={handleForceReset} className="group flex items-center gap-2 bg-red-600 text-white px-3 py-1 rounded-full shadow-lg hover:scale-105 active:scale-95 text-xs absolute -bottom-8 right-0 pointer-events-auto opacity-50 hover:opacity-100 transition-all">
+               <RotateCcw size={12}/> 重置資料
             </button>
           </div>
         </div>
