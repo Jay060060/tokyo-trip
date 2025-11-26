@@ -84,7 +84,7 @@ const firebaseConfig = {
   appId: "1:291700650556:web:82303d66deaa02e93d4939"
 };
 
-const APP_ID = 'tokyo-trip-2025'; 
+const app = initializeApp(firebaseConfig);
 // ============================================================================
 
 // --- 初始資料 (縮減版以節省空間，功能不變) ---
